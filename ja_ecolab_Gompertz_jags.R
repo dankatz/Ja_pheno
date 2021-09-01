@@ -7,7 +7,7 @@ library(rjags)
 library(dplyr)
 library(tidyr)
 library(lubridate)
-library(ggplot2)
+library(ggplot2) 
 
 # ### an example with a toy dataset ##############################################
 # #https://github.com/xbouteiller/GompertzFit/blob/master/ModelGompertz.txt
@@ -984,7 +984,7 @@ p_all_sites <- p %>%
       tree != "-98.05903 30.82545" & tree != "-98.0598 30.82648" & tree != "-98.06041 30.82647" & tree != "-98.06076 30.82632" &#wade/burnett
       tree != "-98.03122 30.13753" #hays
   ) #%>% 
-  #filter(site != "-97.9 30.7") #this site didnt have any visits after 12/31/20
+#filter(site != "-97.9 30.7") #this site didnt have any visits after 12/31/20
 
 # length(unique(p_all_sites$tree))
 # length(unique(p_all_sites$site))
@@ -1059,7 +1059,7 @@ data_for_model_core_prop_open <- p_core_sites %>%
 data_for_model_core_prop_open_list <- split(as.data.frame(data_for_model_core_prop_open), seq(nrow(data_for_model_core_prop_open)))
 data_for_model_core_prop_open_list <- lapply(data_for_model_core_prop_open_list, function(x) x[!is.na(x)])
 data_for_model_core_prop_open_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_prop_open_list, 
-                                                                   `length<-`, max(lengths(data_for_model_core_prop_open_list)))))
+                                                                        `length<-`, max(lengths(data_for_model_core_prop_open_list)))))
 
 data_for_model_core_day_experiment <- p_core_sites %>% 
   select(site_n, tree_n, day_experiment, prop_open) %>% 
@@ -1075,7 +1075,7 @@ data_for_model_core_day_experiment <- p_core_sites %>%
 data_for_model_core_day_experiment_list <- split(as.data.frame(data_for_model_core_day_experiment), seq(nrow(data_for_model_core_day_experiment)))
 data_for_model_core_day_experiment_list <- lapply(data_for_model_core_day_experiment_list, function(x) x[!is.na(x)])
 data_for_model_core_day_experiment_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_day_experiment_list, 
-                                                                        `length<-`, max(lengths(data_for_model_core_day_experiment_list)))))
+                                                                             `length<-`, max(lengths(data_for_model_core_day_experiment_list)))))
 
 data_for_model_core_nobs_per_tree <- p_core_sites %>% 
   select(site_n, tree_n, day_experiment) %>% 
@@ -1310,17 +1310,17 @@ results_params2$tree_n <- as.numeric(gsub("Y_hat_sim[", "", tree_n_vector, fixed
 results_params2 <- arrange(results_params2, tree_n, day_experiment)
 results_tree_core_sim_join <- select(results_params2, tree_n, day_experiment, Mean, SD)
 results_tree_core_sim <- left_join(p_core_sites, results_tree_core_sim_join) %>% 
-mutate(pollen_release = factor(pollen_release, levels = c("NA","none", "little", "some", "lots")),
-       pol_bin = case_when(pollen_release == "none" ~ "none",
-                           pollen_release == "little" ~ "release",
-                           pollen_release == "some" ~ "release",
-                           pollen_release == "lots" ~ "release",
-                           pollen_release == "NA" ~ "none"),
-       pol_cont = case_when(pollen_release == "none" ~ 0,
-                            pollen_release == "little" ~ 0.1,
-                            pollen_release == "some" ~ 0.3,
-                            pollen_release == "lots" ~ 1,
-                            pollen_release == "NA" ~ 0))
+  mutate(pollen_release = factor(pollen_release, levels = c("NA","none", "little", "some", "lots")),
+         pol_bin = case_when(pollen_release == "none" ~ "none",
+                             pollen_release == "little" ~ "release",
+                             pollen_release == "some" ~ "release",
+                             pollen_release == "lots" ~ "release",
+                             pollen_release == "NA" ~ "none"),
+         pol_cont = case_when(pollen_release == "none" ~ 0,
+                              pollen_release == "little" ~ 0.1,
+                              pollen_release == "some" ~ 0.3,
+                              pollen_release == "lots" ~ 1,
+                              pollen_release == "NA" ~ 0))
 
 ggplot()  + theme_bw() +
   geom_line(data = results_params2, aes(x = day_experiment, y = Mean, group = tree_n, color = tree_n)) +
@@ -1332,7 +1332,7 @@ ggplot()  + theme_bw() +
 
 #a little analysis of pollen release
 results_tree_core_sim %>% 
-ggplot(aes(x = date2, y = Mean, color = pollen_release)) + geom_jitter(size = 4, alpha = .7) + theme_bw() +
+  ggplot(aes(x = date2, y = Mean, color = pollen_release)) + geom_jitter(size = 4, alpha = .7) + theme_bw() +
   scale_color_viridis_d(direction = -1) + ylab("cones opened (proportion)")
 
 
@@ -1347,17 +1347,17 @@ p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_d
 #str(p)
 day_start <- mdy("12-10-2020")
 
-core_site_list <- c("chumlea", "comal", "hays", "hurst", "jewell", "menard", "puccetti", "rogers", "sablatura", "shepperd", "wade")
+core_site_list <- c("chumlea", "comal", "hays", "hurst", "jewell", "puccetti",  
+                    "sablatura", "shepperd", "wade") #"rogers", "menard"
 
 p_all_sites <- p %>%
   mutate(prop_open = perc_open/100,
          #date2 = mdy_hm(date) - hours(6), #correct from GMT
          date3 = sample_date,
          site = site_name, #paste(round(x, 1), round(y, 1)),
-         yday = yday(date3),
+         doy = yday(date3),
          tree = paste(round(x, 5), round(y, 5))) %>% 
   filter(!is.na(perc_open)) %>% 
-  #filter(site == "-98 30.1" | site == "-98.2 29.8") %>% 
   mutate(tree_n = as.numeric(as.factor(tree)),
          site_n = as.numeric(as.factor(site)),
          #tree_visit = paste(c(tree_n, as.character(date3))),
@@ -1371,20 +1371,54 @@ p_all_sites <- p %>%
   mutate(site_type = case_when(site_name %in% core_site_list ~ "core",
                                TRUE ~ "snap")) %>% 
   mutate(prop_open  = case_when(prop_open >= 0.95 ~ 0.95, #I don't think the number of open cones above 95% is robust due to cones that will
-                                prop_open < 0.95 ~ prop_open)) #never open and dropping of other cones. So I'm trying 95% as the asymptote
-#filter(site != "-97.9 30.7") #this site didnt have any visits after 12/31/20
+                                prop_open < 0.95 ~ prop_open)) %>% #never open and dropping of other cones. So I'm trying 95% as the asymptote
+  mutate(duplicate_visits = case_when(site_name == "canyon.lake.dam" & date3 == ymd("2020-12-22") ~ "duplicate",
+                                      site_name == "rogers" & date3 == ymd("2020-12-14") ~ "duplicate",
+                                      site_name == "rogers" & date3 == ymd("2020-12-31") ~ "duplicate",
+                                      site_name == "menard" & date3 == ymd("2020-12-28") ~ "duplicate",
+                                      site_name == "x1311.near.menard.site" & date3 == ymd("2020-12-28") ~ "duplicate",
+                                      site_name == "pass.to.the.w.of.hext" & date3 == ymd("2020-12-28") ~ "duplicate",
+                                      TRUE ~ "single visit")) %>% 
+  filter(duplicate_visits == "single visit") #find duplicate visits at what should be snapshot sites and remove them 
+#%>% group_by(site_name, tree_n) %>% summarize(n_visits = n()) 
+
+
+
+#adding in the assumption that all cones were closed on Dec 1 and open on March 1
+p_all_sites_bound_start <- p_all_sites %>% 
+  select(tree, tree_n, site, site_n, site_name, site_type) %>% 
+  distinct() %>% 
+  mutate(prop_open = 0,
+         date3 = mdy("12-01-2020"),
+         day_experiment = as.numeric(date3 - day_start),
+         doy = yday(date3),
+         real_data = "not real data")
+p_all_sites_bound_end <- p_all_sites %>% 
+  select(tree, tree_n, site, site_n, site_name, site_type) %>% 
+  distinct() %>% 
+  mutate(prop_open = 0.95,
+         date3 = mdy("03-01-2021"),
+         day_experiment = as.numeric(date3 - day_start),
+         doy = yday(date3),
+         real_data = "not real data")
+
+p_all_sites <- bind_rows(p_all_sites, p_all_sites_bound_start, p_all_sites_bound_end)
+
+
 
 # length(unique(p_all_sites$tree))
 # length(unique(p_all_sites$site))
-p_all_sites %>%
-ggplot(aes(y = perc_open/100, x = bag_mean)) + geom_point(alpha = .3) + theme_bw() + ylab("pollen sacs open (proportion)") +
-  xlab("cone scales parted (proportion)") + geom_abline(slope = 1, lty = 2) +#geom_smooth(se = FALSE) +
-  facet_wrap(~site)
-# 
+
+# #compare open pollen cones to open pollen sacs
+# p_all_sites %>%
+# ggplot(aes(y = perc_open/100, x = bag_mean)) + geom_point(alpha = .3) + theme_bw() + ylab("pollen sacs open (proportion)") +
+#   xlab("cone scales parted (proportion)") + geom_abline(slope = 1, lty = 2) +#geom_smooth(se = FALSE) +
+#   facet_wrap(~site)
+
 # summary(lm(bag_mean ~ perc_open, data = p_all_sites))
 
 #some QAQC: trees where the proportion of open cones went down at next visit?
-# test <- p_all_sites %>% arrange(tree_n, date3) %>% 
+# test <- p_all_sites %>% arrange(tree_n, date3) %>%  
 #   group_by(tree_n) %>% 
 #   mutate(dif_cones = lag(bag_mean, n = 1)) %>% 
 #   filter(site == "-97.6 32.2") 
@@ -1409,11 +1443,13 @@ length(unique(p_core_sites$site_n))
 p_snap_sites <- left_join(p_all_sites, visits_per_site) %>% 
   filter(site_type == "snap") %>% 
   mutate(tree_n = as.numeric(as.factor(tree)),
-         site_n = as.numeric(as.factor(site)),
          day_experiment = as.numeric(date3 - day_start)) %>% 
-  arrange(date3, tree_n)
+  arrange(tree_n) %>% #so trees and in sites are both in order
+  mutate(site_n = as.numeric(as.factor(site)))
 length(unique(p_snap_sites$site_n))
 
+str(p_snap_sites)
+?as.factor
 
 #export sites for map in arcgis fig1_pheno_sites_210811.mxd
 #p_core_sites %>% dplyr::select(site_name) %>% distinct()
@@ -1441,9 +1477,6 @@ filter(p_core_sites, site == "comal") %>%
   ggplot(aes(x = day_experiment, y = prop_open, group = tree_n, color = tree_n)) + geom_line() + facet_wrap(~site)
 
 p_snap_sites %>%  ggplot(aes(x = day_experiment, y = prop_open, group = tree)) + geom_point() + theme_bw()
-#   filter(tree_n != 5 & tree_n != 14) %>%  #removing a couple trees that didn't open in this time period
-#   mutate(tree_n = as.numeric(as.factor(tree)))
-# #%>%  filter(tree_n < 11)
 
 #graph of cones opening on a single tree
 p_core_sites %>% 
@@ -1490,8 +1523,11 @@ data_for_model_core_nobs_per_tree <- p_core_sites %>%
   summarize(nobs_per_tree = n())
 
 data_for_model_snap <- p_snap_sites %>% 
-  select(day_experiment, date3, prop_open, site_n, tree_n) %>% 
-  arrange(site_n, day_experiment)
+  filter(is.na(real_data)) %>% 
+  select(day_experiment, date3, prop_open, site_n, site_name, tree_n) %>% 
+  arrange(tree_n, site_n, day_experiment) 
+
+max(data_for_model_snap$tree_n)
 
 sink("model_b.txt")
 cat("  
@@ -1502,14 +1538,14 @@ model{
 #core trees loop
   for(tree in 1:n_trees_core){ 
     for(i in 1:nobs_per_tree_core[tree]){
-      Y_hat[tree, i] <- a[tree]  * exp( -exp(-c[tree] * (t[tree, i] - b[tree])))
+      Y_hat[tree, i] <- 0.95  * exp( -exp(-c[tree] * (t[tree, i] - b[tree])))
       Y[tree, i] ~ dnorm(Y_hat[tree, i], LAMBDA1[tree])
     } #end obs loop
   } #end tree loop
 
 #snapshot trees loop
   for(tree_snap in 1:n_trees_snap){
-    Y_hat_snap[tree_snap] <- 0.95  * exp( -exp(-c_sim * (t_snap[tree_snap] - b_snap[tree_snap])))
+    Y_hat_snap[tree_snap] <- 0.95  * exp( -exp(-rate_global_mean * (t_snap[tree_snap] - b_snap[tree_snap])))
     Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap[tree_snap])
   } #end tree loop
 
@@ -1519,47 +1555,53 @@ model{
 for(tree in 1:n_trees_core){
   LAMBDA1[tree]~dgamma(0.0001,0.0001) #uninformative gamma prior
   
-  a[tree] ~ dunif(0.95, 1) #the asympotote #assuming that asymptote is at 1
-  
+  #a[tree] ~ dunif(0.95, 1) #the asympotote #assuming that asymptote is at 1
+  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #shifting left and right-  #
+                                                                  #LAMBDA3_core[site_vector_core[tree]]
+                                                                      #When b = log(2), f(0) = a/2, also called the halfway point
   c[tree] ~ dnorm(rate_global_mean, rate_global_sigma) #the steepness of the curve
   
-  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core[site_vector_core[tree]]) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
  
 } #end priors tree loop
 
 for(tree in 1:n_trees_snap){
   LAMBDA1_snap[tree]~dgamma(0.0001,0.0001) #uninformative gamma prior
 
-  b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap[site_n_snap[tree]]) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
+  b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #[site_n_snap[tree]]
 
 } #end priors tree loop
 
 
 for(site in 1:n_sites_core){
    site_halfway_point_core[site] ~ dnorm(0, 0.001)
-   LAMBDA3_core[site] ~ dgamma(0.0001,0.0001) #uninformative gamma prior
+  # LAMBDA3_core[site] ~ dgamma(core_site_halfway_var_gamma1, core_site_halfway_var_gamma2) 
 } #end priors site loop
 
 for(site in 1:n_sites_snap){
    site_halfway_point_snap[site] ~ dnorm(0, 0.001)
-   LAMBDA3_snap[site] ~ dgamma(0.0001,0.0001) #uninformative gamma prior
+   #LAMBDA3_snap[site] ~ dgamma(0.0001,0.0001) #uninformative gamma prior
 } #end priors site loop
 
 rate_global_mean ~ dnorm(0, 0.001)
 rate_global_sigma ~ dgamma(0.0001,0.0001)
+LAMBDA3_core ~ dgamma(0.0001,0.0001)
+LAMBDA3_snap <- LAMBDA3_core
+#LAMBDA3_snap ~ dgamma(0.0001,0.0001) #uninformative gamma prior 
+# core_site_halfway_var_gamma1 ~ dgamma(0.0001,0.0001)
+# core_site_halfway_var_gamma2 ~ dgamma(0.0001,0.0001)
 c_sim ~ dnorm(rate_global_mean, rate_global_sigma)
 
 #simulation for each tree core
   for(tree in 1:n_trees_core){
     for(i in 1:max_t){
-      Y_hat_sim[tree, i] <- a[tree]  * exp( -exp(-c_sim * (t_sim[i] - b[tree])))
+      Y_hat_sim[tree, i] <- 0.95  * exp( -exp(-c_sim * (t_sim[i] - b[tree])))
     }
   }
 
 #simulation for each tree snap
   for(tree in 1:n_trees_snap){
     for(i in 1:max_t){
-      Y_hat_sim_snap[tree, i] <- 1  * exp( -exp(-c_sim * (t_sim[i] - b_snap[tree])))
+      Y_hat_sim_snap[tree, i] <- 0.95  * exp( -exp(-rate_global_mean * (t_sim[i] - b_snap[tree])))
     }
   }
 
@@ -1567,17 +1609,17 @@ c_sim ~ dnorm(rate_global_mean, rate_global_sigma)
 #simulation for each site mean core
 for(site in 1:n_sites_core){
     for(i in 1:max_t){
-      Y_hat_sim_site[site, i] <- 1 * exp( -exp(-c_sim * (t_sim[i] - b_site_sim_core[site])))
+      Y_hat_sim_site[site, i] <- 0.95 * exp( -exp(-c_sim * (t_sim[i] - b_site_sim_core[site])))
     }
-      b_site_sim_core[site] ~ dnorm(site_halfway_point_core[site], LAMBDA3_core[site])
+      b_site_sim_core[site] ~ dnorm(site_halfway_point_core[site], LAMBDA3_core) #LAMBDA3_core[site]) 
 } #end site sim loop
 
 #simulation for each site mean snap
 for(site in 1:n_sites_snap){
     for(i in 1:max_t){
-      Y_hat_sim_site_snap[site, i] <- 1 * exp( -exp(-c_sim * (t_sim[i] - b_site_sim_snap[site])))
+      Y_hat_sim_site_snap[site, i] <- 0.95 * exp( -exp(-rate_global_mean * (t_sim[i] - b_site_sim_snap[site])))
     }
-      b_site_sim_snap[site] ~ dnorm(site_halfway_point_snap[site], LAMBDA3_snap[site])
+      b_site_sim_snap[site] ~ dnorm(site_halfway_point_snap[site], LAMBDA3_snap)
 } #end site sim loop
     
 }#end model
@@ -1601,7 +1643,7 @@ jags <- jags.model('model_b.txt',
                      t_snap = data_for_model_snap$day_experiment,
                      #tree_n_snap = data_for_model_snap$tree_n,
                      site_n_snap = data_for_model_snap$site_n,
-                     n_trees_snap = nrow(data_for_model_snap),
+                     n_trees_snap = max(data_for_model_snap$tree_n),
                      n_sites_snap = max(data_for_model_snap$site_n)
                    ),
                    n.chains = 3,
@@ -1609,28 +1651,25 @@ jags <- jags.model('model_b.txt',
 
 #dic <- dic.samples(jags, n.iter = 1000, type = "pD"); print(dic) #model DIC
 #Sys.time()
-update(jags,n.iter=1000) 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("c"),  n.iter = 1000, thin = 3) #variables to monitor #"b", "c" "b_snap"
+update(jags,n.iter=3000) 
+mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 3000, thin = 3) #variables to monitor #"b", "c" "b_snap"
 #plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
-results_params2$tree <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter) )
-
-
+results_params2$tree <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter))
 hist(results_params2$Mean)
 
 
 
 #simulation for each tree core
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 100, thin = 3) #variables to monitor
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)
 results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
 results_params2$param<-substr(results_params2$parameter,1,1)
-#results_params2$day_experiment <- 1:max(data_for_model_day_experiment, na.rm = TRUE)
 
 day_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 2) 
 results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed = TRUE) )
@@ -1643,21 +1682,18 @@ results_params3 <- left_join(results_params2, site_n_core_join)
 
 ggplot()  + theme_bw() +
   geom_line(data = results_params3, aes(x = day_experiment, y = Mean, group = tree_n, color = tree_n)) +
-  # geom_line(data = results_params2, aes(x = day_experiment, y = X2.5., group = tree_n,color = tree_n), lty =2) +
-  # geom_line(data = results_params2, aes(x = day_experiment, y = X97.5., group = tree_n,color = tree_n), lty =2) +
   geom_jitter(data = p_core_sites, aes(x = day_experiment, y = prop_open), width = 2, color = "red") +
   facet_wrap(~site_n)
 
 
 ## simulation for each tree snap
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_snap"),  n.iter = 3000, thin = 3) #variables to monitor
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_snap"),  n.iter = 100, thin = 3) #3000 iterations ran out of memory
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)
 results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
 results_params2$param<-substr(results_params2$parameter,1,1)
-#results_params2$day_experiment <- 1:max(data_for_model_day_experiment, na.rm = TRUE)
 
 day_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 2) 
 results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed = TRUE) )
@@ -1665,7 +1701,7 @@ results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed =
 tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
 results_params2$tree_n <- as.numeric(gsub("Y_hat_sim_snap[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n, day_experiment) 
-site_n_snap_join <- select(data_for_model_snap, tree_n, site_n)
+site_n_snap_join <- select(data_for_model_snap, tree_n, site_n) %>% distinct()
 results_params3 <- left_join(results_params2, site_n_snap_join)
 
 ggplot()  + theme_bw() +
@@ -1748,17 +1784,17 @@ results_params2 <- mutate(results_params2, site_n = as.numeric(gsub("Y_hat_sim["
 
 results_tree_core_sim_join <- select(results_params2, tree_n, day_experiment, Mean, SD)
 results_tree_core_sim <- left_join(p_core_sites, results_tree_core_sim_join) 
-  # mutate(pollen_release = factor(pollen_release, levels = c("NA","none", "little", "some", "lots")),
-  #        pol_bin = case_when(pollen_release == "none" ~ "none",
-  #                            pollen_release == "little" ~ "release",
-  #                            pollen_release == "some" ~ "release",
-  #                            pollen_release == "lots" ~ "release",
-  #                            pollen_release == "NA" ~ "none"),
-  #        pol_cont = case_when(pollen_release == "none" ~ 0,
-  #                             pollen_release == "little" ~ 0.1,
-  #                             pollen_release == "some" ~ 0.3,
-  #                             pollen_release == "lots" ~ 1,
-  #                             pollen_release == "NA" ~ 0))
+# mutate(pollen_release = factor(pollen_release, levels = c("NA","none", "little", "some", "lots")),
+#        pol_bin = case_when(pollen_release == "none" ~ "none",
+#                            pollen_release == "little" ~ "release",
+#                            pollen_release == "some" ~ "release",
+#                            pollen_release == "lots" ~ "release",
+#                            pollen_release == "NA" ~ "none"),
+#        pol_cont = case_when(pollen_release == "none" ~ 0,
+#                             pollen_release == "little" ~ 0.1,
+#                             pollen_release == "some" ~ 0.3,
+#                             pollen_release == "lots" ~ 1,
+#                             pollen_release == "NA" ~ 0))
 
 ggplot()  + theme_bw() +
   geom_line(data = results_params2, aes(x = day_experiment, y = Mean, group = tree_n, color = tree_n)) +
@@ -1795,7 +1831,7 @@ p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_d
 day_start <- mdy("12-10-2020")
 
 p_all_sites <- p %>%
-   mutate(prop_open = bag_mean,#perc_open/100,
+  mutate(prop_open = bag_mean,#perc_open/100,
          #date2 = mdy_hm(date) - hours(6), #correct from GMT
          date3 = sample_date,
          site = site_name,#paste(round(x, 1), round(y, 1)),
@@ -1807,9 +1843,9 @@ p_all_sites <- p %>%
       tree != "-98.05903 30.82545" & tree != "-98.0598 30.82648" & tree != "-98.06041 30.82647" & tree != "-98.06076 30.82632" &#wade/burnett
       tree != "-98.03122 30.13753") %>%  #hays 
   filter(site_name != "bulverde.park" & #these sites don't have enough info to be useful
-         site_name != "evans"&
-         site_name != "k.allison.ranch" &
-         site_name != "speegleville") %>%  
+           site_name != "evans"&
+           site_name != "k.allison.ranch" &
+           site_name != "speegleville") %>%  
   #filter(site == "-98 30.1" | site == "-98.2 29.8") %>%  #-97.85830	30.69633
   mutate(tree_n = as.numeric(as.factor(tree)),
          site_n = as.numeric(as.factor(site)),
@@ -1859,20 +1895,20 @@ p_snap_sites <- left_join(p_all_sites, visits_per_site) %>%
   # group_by(site_n, site_name, date3, day_experiment) %>% summarize(prop_open = mean(prop_open, na.rm = TRUE),
   #                                                       x = mean(x),
   #                                                       y = mean(y)) %>% 
-   #filter(prop_open > 0.03 & prop_open < 0.97) %>% 
+  #filter(prop_open > 0.03 & prop_open < 0.97) %>% 
   mutate(tree_n = as.numeric(as.factor(tree)),
          site_n = as.numeric(as.factor(site)),
          day_experiment = as.numeric(date3 - day_start)) 
-  #arrange(date3, tree_n)
+#arrange(date3, tree_n)
 length(unique(p_snap_sites$tree_n))
-p_snap_sites %>%  ggplot(aes(x = prop_open, group = tree_n)) + geom_histogram() +xlab("average proportion of sacs open") + theme_bw()#+ facet_wrap(~site)
+p_snap_sites %>%  ggplot(aes(x = prop_open, group = tree_n)) + geom_histogram() +xlab("average proportion of sacs open") + theme_bw()#
 #test <- p_snap_sites %>% group_by(site_n) %>% summarize(site_mean = mean(prop_open, na.rm = TRUE))
 #test <- filter(p_snap_sites, site_name == "rr.337...rimrock")
 
 #p_snap_sites %>% select(site, site_n, site_name) %>% distinct() -> test
 
 #filter(p_core_sites, site == "-97.6 32.2") %>% 
-  # ggplot(aes(x = day_experiment, y = prop_open, group = tree_n, color = tree_n)) + geom_line() + facet_wrap(~site)
+# ggplot(aes(x = day_experiment, y = prop_open, group = tree_n, color = tree_n)) + geom_line() + facet_wrap(~site)
 
 # p_snap_sites %>%  ggplot(aes(x = day_experiment, y = prop_open, group = tree)) + geom_point() 
 #   filter(tree_n != 5 & tree_n != 14) %>%  #removing a couple trees that didn't open in this time period
@@ -1956,7 +1992,7 @@ for(tree in 1:n_trees_core){
   c[tree] ~ dnorm(rate_global_mean, rate_global_sigma) #the steepness of the curve
   
   #b[tree] ~ dnorm(halfway_point_global_mean, halfway_point_global_sigma) # hierarchical
-   b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
+   b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #shifting left and right-
     #b[tree] ~ dnorm(0, 0.0001) #as a fixed effect
 } #end priors tree loop
 
@@ -2098,7 +2134,7 @@ p_core_sites_halfway_day <- results_params3 %>%
   group_by(tree_n) %>%
   mutate(sample_date = day_start + day_experiment) %>% 
   slice(which.min(abs(Mean - 0.50))) 
-  
+
 
 
 
@@ -2311,24 +2347,24 @@ weather_at_stations3 <- weather_at_stations %>% group_by(site) %>%
          # met_tmaxdegc_l1 = lag(met_tmaxdegc, 1),
          # met_tmindegc_l1 = lag(met_tmindegc, 1),
          # #met_tavgdegc_l1 = lag(met_tmindegc + met_tmindegc )/2) 
-          met_prcpmmday_l1 =  dplyr::lag(x = met_ppt, k = 1),
-
+         met_prcpmmday_l1 =  dplyr::lag(x = met_ppt, k = 1),
+         
          # met_vpPa_l1 = lag(met_vpPa, 1),
          # # met_vpdmin_l1 = lag(met_vpdmin, 1),
          # # met_vpdmax_l1 = lag(met_vpdmax, 1),
          # # 
          # matmax_7 =rollapply(met_tmaxdegc, 7,mean,align='right',fill=NA),
          # matmin_7 =rollapply(met_tmindegc, 7,mean,align='right',fill=NA),
-          matavg_7 = rollapply(met_tmean, 7, mean,align='right',fill=NA),
-          maprcp_7 = rollapply(met_ppt, 7, mean,align='right',fill=NA),
+         matavg_7 = rollapply(met_tmean, 7, mean,align='right',fill=NA),
+         maprcp_7 = rollapply(met_ppt, 7, mean,align='right',fill=NA),
          # mavp_7 = rollapply(met_vpPa, 7,mean,align='right',fill=NA),
          # # mavpdmin_7 = rollapply(met_vpdmin, 7,mean,align='right',fill=NA),
          # # mavpdmax_7 = rollapply(met_vpdmax, 7,mean,align='right',fill=NA),
          # # 
          # matmax_14 =rollapply(met_tmaxdegc, 14,mean,align='right',fill=NA),
          # matmin_14 =rollapply(met_tmindegc, 14,mean,align='right',fill=NA),
-          matavg_14 =rollapply(((met_tmindegc + met_tmindegc )/2), 14,mean,align='right',fill=NA),
-          maprcp_14 = rollapply(met_ppt, 14,mean,align='right',fill=NA),
+         matavg_14 =rollapply(((met_tmindegc + met_tmindegc )/2), 14,mean,align='right',fill=NA),
+         maprcp_14 = rollapply(met_ppt, 14,mean,align='right',fill=NA),
          # masrad_14 = rollapply(met_sradWm2, 14,mean,align='right',fill=NA),
          # mavp_14 = rollapply(met_vpPa, 14,mean,align='right',fill=NA),
          # # mavpdmin_14 = rollapply(met_vpdmin, 14,mean,align='right',fill=NA),
@@ -2336,8 +2372,8 @@ weather_at_stations3 <- weather_at_stations %>% group_by(site) %>%
          # # 
          # matmax_21 =rollapply(met_tmaxdegc, 21,mean,align='right',fill=NA),
          # matmin_21 =rollapply(met_tmindegc, 21,mean,align='right',fill=NA),
-          matavg_21 =rollapply(((met_tmindegc + met_tmindegc )/2), 21,mean,align='right',fill=NA),
-          maprcp_21 = rollapply(met_ppt, 21,mean,align='right',fill=NA),
+         matavg_21 =rollapply(((met_tmindegc + met_tmindegc )/2), 21,mean,align='right',fill=NA),
+         maprcp_21 = rollapply(met_ppt, 21,mean,align='right',fill=NA),
          # masrad_21 = rollapply(met_sradWm2, 21,mean,align='right',fill=NA),
          # mavp_21 = rollapply(met_vpPa, 21,mean,align='right',fill=NA),
          # # mavpdmin_21 = rollapply(met_vpdmin, 21,mean,align='right',fill=NA),
@@ -2345,8 +2381,8 @@ weather_at_stations3 <- weather_at_stations %>% group_by(site) %>%
          # 
          # matmax_28 =rollapply(met_tmaxdegc, 28,mean,align='right',fill=NA),
          # matmin_28 =rollapply(met_tmindegc, 28,mean,align='right',fill=NA),
-          matavg_28 =rollapply(((met_tmindegc + met_tmindegc )/2), 28,mean,align='right',fill=NA),
-          maprcp_28 = rollapply(met_ppt, 28,mean,align='right',fill=NA),
+         matavg_28 =rollapply(((met_tmindegc + met_tmindegc )/2), 28,mean,align='right',fill=NA),
+         maprcp_28 = rollapply(met_ppt, 28,mean,align='right',fill=NA),
          # masrad_28 = rollapply(met_sradWm2, 28,mean,align='right',fill=NA),
          # mavp_28 = rollapply(met_vpPa, 28,mean,align='right',fill=NA),
          # # mavpdmin_28 = rollapply(met_vpdmin, 28,mean,align='right',fill=NA),
@@ -2354,36 +2390,36 @@ weather_at_stations3 <- weather_at_stations %>% group_by(site) %>%
          # 
          # matmax_35 =rollapply(met_tmaxdegc, 35,mean,align='right',fill=NA),
          # matmin_35 =rollapply(met_tmindegc, 35,mean,align='right',fill=NA),
-          matavg_35 =rollapply(((met_tmindegc + met_tmindegc )/2), 35,mean,align='right',fill=NA),
-          maprcp_35 = rollapply(met_ppt, 35,mean,align='right',fill=NA)
+         matavg_35 =rollapply(((met_tmindegc + met_tmindegc )/2), 35,mean,align='right',fill=NA),
+         maprcp_35 = rollapply(met_ppt, 35,mean,align='right',fill=NA)
          # masrad_35 = rollapply(met_sradWm2, 35,mean,align='right',fill=NA),
          # mavp_35 = rollapply(met_vpPa, 35,mean,align='right',fill=NA),
          # mavpdmin_35 = rollapply(met_vpdmin, 35,mean,align='right',fill=NA),
          # mavpdmax_35 = rollapply(met_vpdmax, 35,mean,align='right',fill=NA)
-         )
+  )
 
 #creating some summary weather data
 weather_at_stations_summary_dec <- weather_at_stations3 %>% 
   group_by(site, season) %>% 
   filter(mo == 12) %>% 
   summarize(#matmax_dec = mean(met_tmaxdegc),
-            #matmin_dec = mean(met_tmindegc),
-            mactmean_dec = mean(met_tmean),
-            macprcp_dec = mean(met_ppt)
-            #mavpda_dec = mean(met_vpPa)
-            # mavpdmin_dec = mean(met_vpdmin),
-            # mavpdmax_dec = mean(met_vpdmax)
-            )
+    #matmin_dec = mean(met_tmindegc),
+    mactmean_dec = mean(met_tmean),
+    macprcp_dec = mean(met_ppt)
+    #mavpda_dec = mean(met_vpPa)
+    # mavpdmin_dec = mean(met_vpdmin),
+    # mavpdmax_dec = mean(met_vpdmax)
+  )
 
 weather_at_stations_summary_jan <- weather_at_stations3 %>%
   group_by(site, season) %>%
   filter(mo == 1) %>%
   summarize(#matmax_jan = mean(met_tmaxdegc),
-            #matmin_jan = mean(met_tmindegc),
-            mactmean_jan = mean(met_tmean),
-            macprcp_jan = mean(met_ppt))
-            #mavpdmin_jan = mean(met_vpdmin),
-            #mavpdmax_jan = mean(met_vpdmax))
+    #matmin_jan = mean(met_tmindegc),
+    mactmean_jan = mean(met_tmean),
+    macprcp_jan = mean(met_ppt))
+#mavpdmin_jan = mean(met_vpdmin),
+#mavpdmax_jan = mean(met_vpdmax))
 
 weather_at_stations_summary_fall <- weather_at_stations3 %>%
   mutate( season = case_when(doy > 274 ~ paste("s", year, (year + 1)),
@@ -2392,11 +2428,11 @@ weather_at_stations_summary_fall <- weather_at_stations3 %>%
   group_by(site, season) %>%
   filter(mo > 9 & season != "not Ja season") %>%
   summarize(#matmax_fall = mean(met_tmaxdegc),
-            #matmin_fall = mean(met_tmindegc),
-            mactmean_fall = mean(met_tmean),
-            macprcp_fall = mean(met_ppt))
-            #mavpdmin_fall = mean(met_vpdmin),
-            #mavpdmax_fall = mean(met_vpdmax))
+    #matmin_fall = mean(met_tmindegc),
+    mactmean_fall = mean(met_tmean),
+    macprcp_fall = mean(met_ppt))
+#mavpdmin_fall = mean(met_vpdmin),
+#mavpdmax_fall = mean(met_vpdmax))
 # 
 # #joining weather data with pollen
 # pw <- left_join(p, weather_at_stations3)
@@ -2405,7 +2441,7 @@ weather_at_stations_summary_fall <- weather_at_stations3 %>%
 # pw <- left_join(pw, weather_at_stations_summary_fall)
 
 
- 
+
 # site_halfway_params2_filt <-  site_halfway_params2 %>% #filter(site_n != 5) %>% 
 #   mutate(site = paste(site_long, site_lat),
 #          date = day_start + Mean,
@@ -2416,7 +2452,7 @@ site_halfway_params2_filt <-  trees_mean_day %>% #filter(!is.na(site_n)) %>%
   mutate(site = paste(round(x, 1), round(y, 1)),
          dif_mean = site_mean - global_mean_50p,
          date = day_start + site_mean) 
-  
+
 
 site_halfway_params2_filt <- left_join(site_halfway_params2_filt, weather_at_stations_summary_dec)
 site_halfway_params2_filt<- left_join(site_halfway_params2_filt, weather_at_stations_summary_jan)
@@ -2503,6 +2539,5 @@ sms %>%
   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
                formula = formula, parse = TRUE, label.x = .9) +
   theme_bw() + xlab("surface soil moisture (mm)") + ylab("50% pollen released (day)")
-
 
 
