@@ -1370,8 +1370,8 @@ p_all_sites <- p %>%
   ) %>% 
   mutate(site_type = case_when(site_name %in% core_site_list ~ "core",
                                TRUE ~ "snap")) %>% 
-  mutate(prop_open  = case_when(prop_open >= 0.95 ~ 0.95, #I don't think the number of open cones above 95% is robust due to cones that will
-                                prop_open < 0.95 ~ prop_open)) %>% #never open and dropping of other cones. So I'm trying 95% as the asymptote
+  mutate(prop_open  = case_when(prop_open >= 0.99 ~ 0.99, #I don't think the number of open cones above 95% is robust due to cones that will
+                                prop_open < 0.99 ~ prop_open)) %>% #never open and dropping of other cones. So I'm trying 95% as the asymptote
   mutate(duplicate_visits = case_when(site_name == "canyon.lake.dam" & date3 == ymd("2020-12-22") ~ "duplicate",
                                       site_name == "rogers" & date3 == ymd("2020-12-14") ~ "duplicate",
                                       site_name == "rogers" & date3 == ymd("2020-12-31") ~ "duplicate",
@@ -1396,7 +1396,7 @@ p_all_sites_bound_start <- p_all_sites %>%
 p_all_sites_bound_end <- p_all_sites %>% 
   select(tree, tree_n, site, site_n, site_name, site_type) %>% 
   distinct() %>% 
-  mutate(prop_open = 0.95,
+  mutate(prop_open = 0.99,
          date3 = mdy("03-01-2021"),
          day_experiment = as.numeric(date3 - day_start),
          doy = yday(date3),
@@ -1545,7 +1545,13 @@ data_for_model_snap <- p_snap_sites %>%
   select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
   arrange(tree_n_snap, site_n_snap, day_experiment) 
 
-max(data_for_model_snap$tree_n_snap)
+# Assuming that no cones were open on Dec 10 and that all cones had opened by Mar. 1
+Y_snap_df_ass <- bind_cols(rep(x = 0, times = nrow(data_for_model_snap)),
+                               data_for_model_snap$prop_open,
+                               rep(x = 0.99, times = nrow(data_for_model_snap)))
+t_snap_df_ass <- bind_cols(rep(x = 1, times = nrow(data_for_model_snap)),
+                           data_for_model_snap$prop_open,
+                           rep(x = 60, times = nrow(data_for_model_snap)))
 
 sink("model_b.txt")
 cat("  
@@ -1556,25 +1562,33 @@ model{
 #core trees loop
   for(tree in 1:n_trees_core){ 
     for(i in 1:nobs_per_tree_core[tree]){
-      Y_hat[tree, i] <- 0.95  * exp( -exp(-c[tree] * (t[tree, i] - b[tree])))
+      Y_hat[tree, i] <- 0.99  * exp( -exp(-c[tree] * (t[tree, i] - b[tree])))
       Y[tree, i] ~ dnorm(Y_hat[tree, i], LAMBDA1[tree])
     } #end obs loop
   } #end tree loop
 
 #snapshot trees loop
   for(tree_snap in 1:n_trees_snap){
-    Y_hat_snap[tree_snap] <- 0.95  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap] -
+      Y_hat_snap[tree_snap] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap] -
                                           b_snap[tree_snap])))
-    Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap[tree_snap])
+      Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap[tree_snap])
   } #end tree loop
+
+# for(tree_snap in 1:n_trees_snap){
+#     for(i in 1:3){
+#       Y_hat_snap[tree_snap, i] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap, i] -
+#                                           b_snap[tree_snap])))
+#       Y_snap[tree_snap, i] ~ dnorm(Y_hat_snap[tree_snap, i], LAMBDA1_snap[tree_snap])
+#     } #end obs loop
+#   } #end tree loop
 
   
   
 #Priors
 for(tree in 1:n_trees_core){
-  LAMBDA1[tree]~dgamma(0.001,0.001) #uninformative gamma prior
+  LAMBDA1[tree]~dgamma(0.01,0.01) #uninformative gamma prior
   
-  #a[tree] ~ dunif(0.95, 1) #the asympotote #assuming that asymptote is at 1
+  #a[tree] ~ dunif(0.99, 1) #the asympotote #assuming that asymptote is at 1
   b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #shifting left and right-  #
                                                                   #LAMBDA3_core[site_vector_core[tree]]
                                                                       #When b = log(2), f(0) = a/2, also called the halfway point
@@ -1582,8 +1596,9 @@ for(tree in 1:n_trees_core){
 } #end priors tree loop: core
 
 for(tree in 1:n_trees_snap){
-  LAMBDA1_snap[tree]~dgamma(0.001,0.001) #uninformative gamma prior
-  b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #[site_n_snap[tree]]
+  LAMBDA1_snap[tree] <- 250 #~dgamma(0.01,0.01) #uninformative gamma prior
+  b_snap[tree] <- max(b_snap_orig[tree], 0) #keeping the halfway point for each tree above Dec 10
+  b_snap_orig[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #[site_n_snap[tree]]
 } #end priors tree loop: snap
 
 
@@ -1598,14 +1613,14 @@ for(site in 1:n_sites_snap){
 } #end priors site loop
 
 rate_global_mean ~ dnorm(0, 0.001)
-rate_global_mean_snap <- max(rate_global_mean, 0)#preventing backflow of information #prevent it from wandering negative
+rate_global_mean_snap <- 1.02 #max(rate_global_mean, 0)#preventing backflow of information #prevent it from wandering negative
 
 rate_global_sigma ~ dgamma(0.01,0.01)
 rate_global_sigma_snap <- rate_global_sigma #preventing backflow of information
 
-LAMBDA3_core ~ dgamma(0.001,0.001)
-LAMBDA3_snap <- LAMBDA3_core
-# LAMBDA3_snap ~ dgamma(0.001,0.001) #uninformative gamma prior 
+LAMBDA3_core ~ dgamma(0.01,0.01)
+LAMBDA3_snap <- 0.031 #LAMBDA3_core
+# LAMBDA3_snap ~ dgamma(0.01,0.01) #uninformative gamma prior 
 # core_site_halfway_var_gamma1 ~ dgamma(0.001,0.001)
 # core_site_halfway_var_gamma2 ~ dgamma(0.001,0.001)
 # c_sim ~ dnorm(rate_global_mean, rate_global_sigma)
@@ -1614,14 +1629,14 @@ LAMBDA3_snap <- LAMBDA3_core
 #simulation for each tree core
   for(tree in 1:n_trees_core){
     for(i in 1:max_t){
-      Y_hat_sim[tree, i] <- 0.95  * exp( -exp(-c[tree] * (t_sim[i] - b[tree])))
+      Y_hat_sim[tree, i] <- 0.99  * exp( -exp(-c[tree] * (t_sim[i] - b[tree])))
     }
   }
 
 # #simulation for each tree snap
 #   for(tree in 1:n_trees_snap){
 #     for(i in 1:max_t){
-#       Y_hat_sim_snap[tree, i] <- 0.95  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
+#       Y_hat_sim_snap[tree, i] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
 #     }
 #   }
 
@@ -1629,7 +1644,7 @@ LAMBDA3_snap <- LAMBDA3_core
 #simulation for each site mean core
 for(site in 1:n_sites_core){
     for(i in 1:max_t){
-      Y_hat_sim_site[site, i] <- 0.95 * exp( -exp(-rate_global_mean * (t_sim[i] - b_site_sim_core[site])))
+      Y_hat_sim_site[site, i] <- 0.99 * exp( -exp(-rate_global_mean * (t_sim[i] - b_site_sim_core[site])))
     }
       b_site_sim_core[site] ~ dnorm(site_halfway_point_core[site], LAMBDA3_core) #LAMBDA3_core[site]) 
 } #end site sim loop
@@ -1637,7 +1652,7 @@ for(site in 1:n_sites_core){
 # #simulation for each site mean snap
 # for(site in 1:n_sites_snap){
 #     for(i in 1:max_t){
-#       Y_hat_sim_site_snap[site, i] <- 0.95 * exp( -exp(-rate_global_mean_snap * (t_sim[i] - 
+#       Y_hat_sim_site_snap[site, i] <- 0.99 * exp( -exp(-rate_global_mean_snap * (t_sim[i] - 
 #                                                    b_site_sim_snap[site])))
 #     }
 #       b_site_sim_snap[site] ~ dnorm(site_halfway_point_snap[site], LAMBDA3_snap)
@@ -1660,7 +1675,7 @@ jags <- jags.model('model_b.txt',
                      max_t = max(p_core_sites$day_experiment, na.rm = TRUE),
                      
                      #snap sites
-                     Y_snap = data_for_model_snap$prop_open,
+                     Y_snap = data_for_model_snap$prop_open, #Y_snap_df_ass
                      t_snap = data_for_model_snap$day_experiment,
                      #tree_n_snap = data_for_model_snap$tree_n_snap,
                      site_n_snap = data_for_model_snap$site_n_snap,
@@ -1673,8 +1688,8 @@ jags <- jags.model('model_b.txt',
 
 #dic <- dic.samples(jags, n.iter = 1000, type = "pD"); print(dic) #model DIC
 #Sys.time()
-#update(jags,n.iter = 5000) 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 15000, thin = 3) #variables to monitor #"b", "c" "b_snap"
+update(jags,n.iter = 5000) 
+mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 1000, thin = 3) #variables to monitor #"b", "c" "b_snap"
 plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
@@ -2009,7 +2024,7 @@ for(tree in 1:n_trees_core){
   LAMBDA1[tree]~dgamma(0.0001,0.0001) #uninformative gamma prior
   
   a[tree] ~ dunif(min_topout, 1) #the asympotote #assuming that asymptote is at 1
-  #a[tree] ~ dbeta(0.95, 1) #the asympotote #assuming that asymptote is at 1
+  #a[tree] ~ dbeta(0.99, 1) #the asympotote #assuming that asymptote is at 1
   
   c[tree] ~ dnorm(rate_global_mean, rate_global_sigma) #the steepness of the curve
   
