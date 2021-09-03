@@ -1553,11 +1553,11 @@ t_snap_df_ass <- bind_cols(rep(x = 1, times = nrow(data_for_model_snap)),
                            data_for_model_snap$prop_open,
                            rep(x = 60, times = nrow(data_for_model_snap)))
 
-sink("model_b.txt")
+sink("model_a.txt")
 cat("  
 model{
   
-  #Likelihood
+##Likelihood
 
 #core trees loop
   for(tree in 1:n_trees_core){ 
@@ -1574,15 +1574,6 @@ model{
       Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap[tree_snap])
   } #end tree loop
 
-# for(tree_snap in 1:n_trees_snap){
-#     for(i in 1:3){
-#       Y_hat_snap[tree_snap, i] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap, i] -
-#                                           b_snap[tree_snap])))
-#       Y_snap[tree_snap, i] ~ dnorm(Y_hat_snap[tree_snap, i], LAMBDA1_snap[tree_snap])
-#     } #end obs loop
-#   } #end tree loop
-
-  
   
 #Priors
 for(tree in 1:n_trees_core){
@@ -1597,19 +1588,17 @@ for(tree in 1:n_trees_core){
 
 for(tree in 1:n_trees_snap){
   LAMBDA1_snap[tree] <- 250 #~dgamma(0.01,0.01) #uninformative gamma prior
-  b_snap[tree] <- max(b_snap_orig[tree], 0) #keeping the halfway point for each tree above Dec 10
-  b_snap_orig[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #[site_n_snap[tree]]
+  #b_snap[tree] <- max(b_snap_orig[tree], 0) #keeping the halfway point for each tree above Dec 10
+  b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #[site_n_snap[tree]]
 } #end priors tree loop: snap
 
 
 for(site in 1:n_sites_core){
    site_halfway_point_core[site] ~ dnorm(0, 0.001)
-  # LAMBDA3_core[site] ~ dgamma(core_site_halfway_var_gamma1, core_site_halfway_var_gamma2) 
 } #end priors site loop
 
 for(site in 1:n_sites_snap){
    site_halfway_point_snap[site] ~ dnorm(0, 0.001)
-   #LAMBDA3_snap[site] ~ dgamma(0.001,0.001) #uninformative gamma prior
 } #end priors site loop
 
 rate_global_mean ~ dnorm(0, 0.001)
@@ -1621,8 +1610,6 @@ rate_global_sigma_snap <- rate_global_sigma #preventing backflow of information
 LAMBDA3_core ~ dgamma(0.01,0.01)
 LAMBDA3_snap <- 0.031 #LAMBDA3_core
 # LAMBDA3_snap ~ dgamma(0.01,0.01) #uninformative gamma prior 
-# core_site_halfway_var_gamma1 ~ dgamma(0.001,0.001)
-# core_site_halfway_var_gamma2 ~ dgamma(0.001,0.001)
 # c_sim ~ dnorm(rate_global_mean, rate_global_sigma)
 # c_sim_snap ~ dnorm(rate_global_mean_snap, rate_global_sigma_snap)
 
@@ -1633,12 +1620,12 @@ LAMBDA3_snap <- 0.031 #LAMBDA3_core
     }
   }
 
-# #simulation for each tree snap
-#   for(tree in 1:n_trees_snap){
-#     for(i in 1:max_t){
-#       Y_hat_sim_snap[tree, i] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
-#     }
-#   }
+#simulation for each tree snap
+  for(tree in 1:n_trees_snap){
+    for(i in 1:max_t){
+      Y_hat_sim_snap[tree, i] <- 0.99  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
+    }
+  }
 
 
 #simulation for each site mean core
@@ -1649,20 +1636,20 @@ for(site in 1:n_sites_core){
       b_site_sim_core[site] ~ dnorm(site_halfway_point_core[site], LAMBDA3_core) #LAMBDA3_core[site]) 
 } #end site sim loop
 
-# #simulation for each site mean snap
-# for(site in 1:n_sites_snap){
-#     for(i in 1:max_t){
-#       Y_hat_sim_site_snap[site, i] <- 0.99 * exp( -exp(-rate_global_mean_snap * (t_sim[i] - 
-#                                                    b_site_sim_snap[site])))
-#     }
-#       b_site_sim_snap[site] ~ dnorm(site_halfway_point_snap[site], LAMBDA3_snap)
-# } #end site sim loop
+#simulation for each site mean snap
+for(site in 1:n_sites_snap){
+    for(i in 1:max_t){
+      Y_hat_sim_site_snap[site, i] <- 0.99 * exp( -exp(-rate_global_mean_snap * (t_sim[i] -
+                                                   b_site_sim_snap[site])))
+    }
+      b_site_sim_snap[site] ~ dnorm(site_halfway_point_snap[site], LAMBDA3_snap)
+} #end site sim loop
     
 }#end model
     ",fill=TRUE)
 sink() 
 
-jags <- jags.model('model_b.txt', 
+jags <- jags.model('model_a.txt', 
                    data = list(
                      #core sites
                      Y = as.matrix(data_for_model_core_prop_open_ragged),  #data_for_model_prop_open[3,1]
@@ -1688,8 +1675,8 @@ jags <- jags.model('model_b.txt',
 
 #dic <- dic.samples(jags, n.iter = 1000, type = "pD"); print(dic) #model DIC
 #Sys.time()
-update(jags,n.iter = 5000) 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 1000, thin = 3) #variables to monitor #"b", "c" "b_snap"
+update(jags,n.iter = 8000) 
+mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 2000, thin = 3) #variables to monitor #"b", "c" "b_snap"
 plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
@@ -1724,7 +1711,7 @@ ggplot()  + theme_bw() +
 
 
 ## simulation for each tree snap
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_snap"),  n.iter = 100, thin = 3) #3000 iterations ran out of memory
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_snap"),  n.iter = 1000, thin = 3) #3000 iterations ran out of memory
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)
@@ -1739,18 +1726,24 @@ tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1)
 results_params2$tree_n_snap <- as.numeric(gsub("Y_hat_sim_snap[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n_snap, day_experiment) 
 site_n_snap_join <- select(data_for_model_snap, tree_n_snap, site_n_snap) %>% distinct()
-results_params3 <- left_join(results_params2, site_n_snap_join)
+results_params3 <- left_join(results_params2, site_n_snap_join) %>% 
+  mutate(date3 = day_start + day_experiment)
 
+results_params4 <- filter(results_params3, date3 > mdy("12-15-2020") & date3 < mdy("02-01-2021")) 
 ggplot()  + theme_bw() +
-  geom_line(data = results_params3, aes(x = day_experiment, y = Mean, group = tree_n_snap, color = tree_n_snap)) +
+  geom_line(data = results_params4, aes(x = date3, y = Mean, group = tree_n_snap)) +
   # geom_line(data = results_params2, aes(x = day_experiment, y = X2.5., group = tree_n,color = tree_n), lty =2) +
   # geom_line(data = results_params2, aes(x = day_experiment, y = X97.5., group = tree_n,color = tree_n), lty =2) +
-  geom_jitter(data = data_for_model_snap, aes(x = day_experiment, y = prop_open), width = 2, color = "red") +
-  facet_wrap(~site_n_snap)
+  geom_jitter(data = data_for_model_snap, aes(x = date3, y = prop_open), width = 2, color = "red") +
+  facet_wrap(~site_n_snap) + xlab("day of experiment") + ylab("cones open (proportion)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
+### NEXT STEPS: extract site means for each site: core and snap
+### compare cones vs pollen sacs data at site level
+### implement cone model for previous year!!
 
-#simulation for each site
+#simulation for each snap site
 mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_site"),  n.iter = 1000, thin = 3) #variables to monitor
 #plot(mcmc_samples_params2)
 
@@ -1773,13 +1766,16 @@ ggplot()  + theme_bw() +
   geom_line(data = results_params2, aes(x = day_experiment, y = Mean, group = site_n, color = as.factor(site_n))) +
   geom_jitter(data = p_core_sites, aes(x = day_experiment, y = prop_open), color = "red") 
 
+
+
 #site means across space
-tx_boundary <- read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 site_locations <- p_core_sites %>% 
   mutate(site_long = round(x, 1),
          site_lat = round(y,1)) %>% 
   select(site_n, site_long, site_lat) %>% distinct() 
 #ggplot(aes(x= site_long, y = site_lat)) + geom_point()
+
 
 site_halfway_sim <- coda.samples(jags, variable.names=c("b_site_sim"),  n.iter = 2000, thin = 3) #variables to monitor
 site_halfway_params <- summary(site_halfway_sim)
