@@ -5,7 +5,10 @@ library(magrittr)
 library(zoo)
 library(readr)
 library(dplyr)
+library(tidyr)
 library(climwin)
+library(imputeTS)
+library(ggpmisc)
 #rm(list=ls())
 
 #load in site level-estimates: cones for field season 2021
@@ -42,11 +45,12 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 ### SMAP: loading in surface soil moisture (sms) ########################################
 #SMAP download script is Google Earth Engine in: TX_Ja_pheno
 
-sms_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_SMS_2019_2021_download_210907.csv")
+sms_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP_SMS_2019_2021_download_210907.csv",
+                    na = "No data")
 
 sms <- 
-  sms_raw %>% 
-  pivot_longer(cols = contains("T12:00:00")) %>% 
+  sms_raw %>%  #names(sms_raw) #str(sms_raw)
+  pivot_longer(cols = contains("00:00")) %>% 
   rename(site_coords = .geo) %>% 
   mutate(site_coords = substr(site_coords, 32, 70),
          site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
@@ -75,16 +79,17 @@ sms %>%
 #20-21 field season
 sms %>% 
   filter(years == "20-21") %>% 
-  filter(sms_date > ymd("20/01/20")) %>% 
+  filter(sms_date > ymd("20/01/01")) %>% 
   filter(sms_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
   scale_color_viridis_c(name = "peak date", trans = "date") +
   xlab("date") + ylab("surface soil moisture (mm)")
+
 summary(sms$sms)
 
 formula <- y ~ x 
 #formula <- y ~ x + I(x^2)
-library(ggpmisc)
+
 sms %>% 
   filter(years == "19-20") %>% 
   filter(sms_date > ymd("19/04/1")) %>% 
@@ -92,66 +97,333 @@ sms %>%
   group_by(site, site_name, d, d2) %>% 
   summarize(sms_mean = mean(sms)) %>%  #-> test2 #%>% #%T>% => test 
   ggplot(aes(x = sms_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
-  geom_smooth(method = "lm", formula = formula, se = FALSE) + geom_label() + 
+  geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
                formula = formula, parse = TRUE, label.x = .9) +
   theme_bw() + xlab("surface soil moisture (mm)") + ylab("50% pollen released (day)") 
 
 sms %>% 
   filter(years == "20-21") %>% 
-  filter(sms_date > ymd("19/04/1")) %>% 
-  filter(sms_date < ymd("19/06/1")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  filter(sms_date > ymd("20/04/01")) %>% 
+  filter(sms_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   group_by(site, site_name, d, d2) %>% 
   summarize(sms_mean = mean(sms))%>%  #-> test # #%T>% => test 
   ggplot(aes(x = sms_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
-  geom_smooth(method = "lm", formula = formula, se = FALSE) + geom_label() + 
+  geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
                formula = formula, parse = TRUE, label.x = .9) +
   theme_bw() + xlab("surface soil moisture (mm)") + ylab("50% pollen released (day)")
 
-### trying out the climwin package ###############################################
-sms_2021 <- filter(sms, years == "20-21") %>% 
-  mutate(d3 = paste(day(sms_date), "/", month(sms_date),"/", year(sms_date), sep = ""), #climwin wants date in ddmmyyyy format
-         placeholder_date = "31/12/2020")
-MassWin <- slidingwin(xvar = list(Temp = sms_2021$sms),
-                      cdate = sms_2021$d3,
-                      bdate = sms_2021$placeholder_date,
-                      baseline = lm(d ~ 1, data = sms_2021),
-                      cinterval = "week",
-                      range = c(50, 0),
-                      type = "absolute", 
-                      refday = c(31, 12), #dd mm of reference day
-                      stat = "mean",
-                      func = "lin", 
-                      spatial = list(sms_2021$site_name, sms_2021$site_name))
-head(MassWin[[1]]$Dataset)
-MassWin[[1]]$BestModel
+smap_spring19 <- 
+  sms %>% 
+  filter(sms_date > ymd("19/04/01")) %>% 
+  filter(sms_date < ymd("19/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(sms_mean = mean(sms))
 
-MassRand <- randwin(  repeats = 100,
-                      xvar = list(Temp = sms_2021$sms),
-                      cdate = sms_2021$d3,
-                      bdate = sms_2021$placeholder_date,
-                      baseline = lm(d ~ 1, data = sms_2021),
-                      cinterval = "week",
-                      range = c(50, 0),
-                      type = "absolute", 
-                      refday = c(31, 12), #dd mm of reference day
-                      stat = "mean",
-                      func = "lin", 
-                      spatial = list(sms_2021$site_name, sms_2021$site_name))
+smap_spring20 <- 
+  sms %>% 
+  filter(years == "20-21") %>% 
+  filter(sms_date > ymd("20/04/01")) %>% 
+  filter(sms_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(sms_mean = mean(sms)) 
+  
 
-pvalue(dataset = MassWin[[1]]$Dataset, datasetrand = MassRand[[1]], metric = "C", 
-       sample.size = length(unique(sms_2021$site_name))) #using the number of different sites as n
-MassOutput <- MassWin[[1]]$Dataset
-MassRand <- MassRand[[1]]
-plotdelta(dataset = MassOutput)
-plotweights(dataset = MassOutput)
-plotbetas(dataset = MassOutput)
-plotwin(dataset = MassOutput)
-plotall(dataset = MassOutput,
-        datasetrand = MassRand,
-        bestmodel = MassSingle$BestModel, 
-        bestmodeldata = MassSingle$BestModelData)
+
+
+### vpd: loading in vapor pressure deficit (from daymet) ########################################
+#download script is Google Earth Engine in: TX_Ja_pheno
+
+vpd_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_vp_2018_2020_download.csv",
+                    na = "No data")
+
+vpd <- 
+  vpd_raw %>%  #names(vpd_raw) #str(vpd_raw)
+  pivot_longer(cols = contains("00:00")) %>% 
+  rename(site_coords = .geo) %>% 
+  mutate(site_coords = substr(site_coords, 32, 70),
+         site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+  separate(site_coords, sep = ",", c("lat", "long")) %>% 
+  mutate(lat = round(as.numeric(lat), 1), 
+         long = round(as.numeric(long), 1),
+         site = paste(long, lat)) %>% 
+  rename(vpd = value) %>% 
+  mutate(vpd_date = lubridate::ymd_hms(name),
+         d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
+                        years == "20-21" ~ d + mdy("12-10-2020"))) %>% 
+  dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+  dplyr::select(-c(name))
+
+
+#19-20 field season
+vpd %>% 
+  filter(years == "19-20") %>% 
+  filter(vpd_date > ymd("19/01/20")) %>% 
+  filter(vpd_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  ggplot(aes(x = vpd_date, y = vpd, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+  scale_color_viridis_c(name = "peak date", trans = "date") +
+  xlab("date") + ylab("vapor pressure deficit (kPa)")
+
+
+#20-21 field season
+vpd %>% 
+  filter(years == "20-21") %>% 
+  filter(vpd_date > ymd("20/01/01")) %>% 
+  filter(vpd_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  ggplot(aes(x = vpd_date, y = vpd, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+  scale_color_viridis_c(name = "peak date", trans = "date") +
+  xlab("date") + ylab("vapor pressure deficit (kPa)")
+
+
+formula <- y ~ x 
+#formula <- y ~ x + I(x^2)
+
+vpd %>% 
+  filter(years == "19-20") %>% 
+  filter(vpd_date > ymd("19/07/1")) %>% 
+  filter(vpd_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(vpd_mean = mean(vpd)) %>%  #-> test2 #%>% #%T>% => test 
+  ggplot(aes(x = vpd_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
+  stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
+               formula = formula, parse = TRUE, label.x = .9) +
+  theme_bw() + xlab("VPD (kPa)") + ylab("50% pollen released (day)") 
+
+vpd %>% 
+  filter(years == "20-21") %>% 
+  filter(vpd_date > ymd("20/07/01")) %>% 
+  filter(vpd_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(vpd_mean = mean(vpd))%>%  #-> test # #%T>% => test 
+  ggplot(aes(x = vpd_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
+  stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
+               formula = formula, parse = TRUE, label.x = .9) +
+  theme_bw() + xlab("VPD (kPa)") + ylab("50% pollen released (day)") 
+
+vpd_summerfall19 <- 
+  vpd %>% 
+  filter(vpd_date > ymd("19/07/01")) %>% 
+  filter(vpd_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(vpd_mean = mean(vpd))
+
+vpd_summerfall20 <- 
+  vpd %>% 
+  filter(years == "20-21") %>% 
+  filter(vpd_date > ymd("20/07/01")) %>% 
+  filter(vpd_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(vpd_mean = mean(vpd))
+test <- lm(d ~ vpd_mean, data = vpd_summerfall20); summary(test)
+
+### combining different variables ##################################################
+vpd_spring19
+vpd_summerfall19
+
+
+
+yr2_env <- left_join(smap_spring20, vpd_summerfall20)
+ggplot(yr2_env, aes(x = sms_mean, y = vpd_mean)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
+
+fit <- lm(d ~ sms_mean + vpd_mean, data = yr2_env)
+summary(fit)
+
+sms_resids <- yr2_env %>% 
+  select(site, site_name, d, d2, sms_mean) %>% 
+  ungroup() %>% 
+  mutate(sms_resid = as.vector(fit$residuals),
+         years = "20-21")
+
+
+
+
+### loop exploration through the other datasets ########################################
+#download script is Google Earth Engine in: TX_Ja_pheno
+env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
+
+
+for(i in 8:21){
+env_raw <- read_csv(env_data_list[i], na = "No data")
+focal_dataset_name <- gsub(x = dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/"),
+                      "_download.csv", "")[i]
+
+env <- 
+  env_raw %>%  #names(vpd_raw) #str(vpd_raw)
+  pivot_longer(cols = contains("00:00")) %>% 
+  rename(site_coords = .geo) %>% 
+  mutate(site_coords = substr(site_coords, 32, 70),
+         site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+  separate(site_coords, sep = ",", c("lat", "long")) %>% 
+  mutate(lat = round(as.numeric(lat), 1), 
+         long = round(as.numeric(long), 1),
+         site = paste(long, lat)) %>% 
+  rename(env = value) %>% 
+  mutate(env_date = lubridate::ymd_hms(name),
+         d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
+                        years == "20-21" ~ d + mdy("12-10-2020"))) %>% 
+  dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+  dplyr::select(-c(name))
+
+env <- left_join(env, sms_resids)
+
+# #19-20 field season
+# env %>% 
+#   filter(years == "19-20") %>% 
+#   filter(env_date > ymd("19/01/20")) %>% 
+#   filter(env_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   ggplot(aes(x = env_date, y = env, group = site, color = resid)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+#   scale_color_viridis_c(name = "peak date", trans = "date") +
+#   xlab("date") + ylab("vapor pressure deficit (kPa)")
+
+#20-21 field season
+env_summary_plot <-
+  env %>% 
+  filter(years == "20-21") %>% 
+  filter(env_date > ymd("20/01/01")) %>% 
+  filter(env_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  ggplot(aes(x = env_date, y = env, group = site, color = sms_resid)) + geom_line(lwd = 1, alpha =0.5) + theme_bw()+
+  scale_color_viridis_c(name = "sms residual") +
+  xlab("date") + ylab(focal_dataset_name)
+
+ggsave(plot = env_summary_plot, 
+       filename = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
+                         focal_dataset_name, ".png"),
+       height = 12,
+       width = 18,
+       units = "in")
+}
+
+
+
+formula <- y ~ x 
+#formula <- y ~ x + I(x^2)
+
+# env %>% 
+#   filter(years == "19-20") %>% 
+#   filter(env_date > ymd("19/07/1")) %>% 
+#   filter(env_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   group_by(site, site_name, d, d2) %>% 
+#   summarize(env_mean = mean(env)) %>%  #-> test2 #%>% #%T>% => test 
+#   ggplot(aes(x = env_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+#   geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
+#   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
+#                formula = formula, parse = TRUE, label.x = .9) +
+#   theme_bw() + xlab("env (kPa)") + ylab("50% pollen released (day)") 
+
+env %>% 
+  filter(years == "20-21") %>% 
+  filter(env_date > ymd("20/07/01")) %>% 
+  filter(env_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, sms_resid) %>% 
+  summarize(env_mean = mean(env))%>%  #-> test # #%T>% => test 
+  ggplot(aes(x = env_mean, y = sms_resid, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
+  stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
+               formula = formula, parse = TRUE, label.x = .9) +
+  theme_bw() + xlab("environmental variable") + ylab("residual of sms: 50% pollen released (day)") 
+
+env_summerfall19 <- 
+  env %>% 
+  filter(env_date > ymd("19/07/01")) %>% 
+  filter(env_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(env_mean = mean(env))
+
+env_summerfall20 <- 
+  env %>% 
+  filter(years == "20-21") %>% 
+  filter(env_date > ymd("20/07/01")) %>% 
+  filter(env_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  group_by(site, site_name, d, d2) %>% 
+  summarize(env_mean = mean(env))
+test <- lm(d ~ env_mean, data = env_summerfall20); summary(test)
+
+
+# ### trying out the climwin package ###############################################
+# sms_2021 <- filter(sms, years == "20-21")
+# 
+# #convert the once every three day measurements to a daily time-step by interpolating sms
+# date_fill_join <- expand_grid(sms_date = seq(min(sms_2021$sms_date), max(sms_2021$sms_date), by = "1 day"),
+#                               site_name = unique(sms_2021$site_name))
+# sms_2021 <- left_join(date_fill_join, sms_2021) %>% 
+#   arrange(site_name, sms_date) 
+# sms_imputed <- imputeTS::na_interpolation(x = sms_2021$sms, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+# sms_2021 <- sms_2021 %>% 
+#       mutate(sms = sms_imputed, 
+#              d3 = paste(day(sms_date), "/", month(sms_date),"/", year(sms_date), sep = ""), #climwin wants date in ddmmyyyy format
+#          placeholder_date = "29/12/2020") %>% 
+#       fill(d, sd, years, lat, long, site, d2, .direction = "downup")
+# 
+# 
+# MassWin <- slidingwin(xvar = list(Temp = sms_2021$sms),
+#                       cdate = sms_2021$d3,
+#                       bdate = sms_2021$placeholder_date,
+#                       baseline = lm(d ~ 1, data = sms_2021),
+#                       cinterval = "week",
+#                       range = c(50, 1),
+#                       type = "absolute", 
+#                       refday = c(31, 12), #dd mm of reference day
+#                       stat = "mean",
+#                       func = "lin", 
+#                       spatial = list(sms_2021$site_name, sms_2021$site_name))
+# head(MassWin[[1]]$Dataset)
+# MassWin[[1]]$BestModel
+# MassOutput <- MassWin[[1]]$Dataset
+# 
+# MassRand <- randwin(  repeats = 100,
+#                       xvar = list(Temp = sms_2021$sms),
+#                       cdate = sms_2021$d3,
+#                       bdate = sms_2021$placeholder_date,
+#                       baseline = lm(d ~ 1, data = sms_2021),
+#                       cinterval = "week",
+#                       range = c(50, 0),
+#                       type = "absolute", 
+#                       refday = c(31, 12), #dd mm of reference day
+#                       stat = "mean",
+#                       func = "lin", 
+#                       spatial = list(sms_2021$site_name, sms_2021$site_name))
+# MassRand <- MassRand[[1]]
+# pvalue(dataset = MassWin[[1]]$Dataset, datasetrand = MassRand[[1]], metric = "C", 
+#        sample.size = length(unique(sms_2021$site_name))) #using the number of different sites as n
+# 
+# plothist(dataset = MassOutput, datasetrand = MassRand)
+# hist(MassRand)
+# 
+# MassSingle <- singlewin(xvar = list(Temp = sms_2021$sms),
+#                         cdate = sms_2021$d3,
+#                         bdate = sms_2021$placeholder_date,
+#                         baseline = lm(d ~ 1, data = sms_2021),
+#                         cinterval = "week",
+#                         range = c(3, 1),
+#                         type = "absolute", 
+#                         refday = c(31, 12), #dd mm of reference day
+#                         stat = "mean",
+#                         func = "lin", 
+#                         spatial = list(sms_2021$site_name, sms_2021$site_name))
+# plotbest(dataset = MassOutput,
+#          bestmodel = MassSingle$BestModel, 
+#          bestmodeldata = MassSingle$BestModelData)
+# summary(MassSingle$BestModel)
+# ?plotbest
+# 
+# plotdelta(dataset = MassOutput)
+# plotweights(dataset = MassOutput)
+# plotbetas(dataset = MassOutput)
+# plotwin(dataset = MassOutput)
+# plotall(dataset = MassOutput,
+#         datasetrand = MassRand,
+#         bestmodel = MassSingle$BestModel, 
+#         bestmodeldata = MassSingle$BestModelData)
+# 
+# plot(MassSingle$BestModelData)
+
+
+
+
+
 
 
 
