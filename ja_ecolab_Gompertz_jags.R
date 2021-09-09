@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2) 
+#rm(list=ls())
 
 # ### an example with a toy dataset ##############################################
 # #https://github.com/xbouteiller/GompertzFit/blob/master/ModelGompertz.txt
