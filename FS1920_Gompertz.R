@@ -115,7 +115,7 @@ npn_data_dk <- read_csv("C:/Users/dsk856/Box/texas/pheno/npn_cit_sci/npn_data_do
                                 Intensity_Value == "50-74%" ~ 62,
                                 Intensity_Value == "75-94%" ~ 84.5,
                                 Intensity_Value == "95% or more" ~ 97.5)) %>% 
-  filter(dates > ymd("2019-12-01") & dates < ymd("2020-03-01")) %>% 
+  filter(dates > ymd("2019-12-10") & dates < ymd("2020-03-01")) %>% 
   dplyr::select(dates, date_hm, Observation_Time, ydays, site, tree, x, y, pc_open_pc, GlobalID) %>% 
   arrange(site, date_hm) %>% 
   filter(tree != 222846) %>%  #not actually Juniperus ashei
@@ -129,7 +129,7 @@ npn_data_dk %>%
 ### combine the data I collected via Collector for ArcGIS and via Nature's Notebook
 arc_data_dk
 npn_data_dk
-day_start_1920 <- mdy("12-08-2019")
+day_start_1920 <- mdy("12-10-2019")
 
 pheno <- bind_rows(arc_data_dk, npn_data_dk) %>% 
           mutate(day_experiment = as.numeric(dates - day_start_1920))
@@ -176,10 +176,10 @@ pheno_sf %>%  ggplot(aes(x = day_experiment, y = pc_open_pc, group = tree, color
 # 
 #save file
 pheno_sf %>% st_drop_geometry() %>%
-  write_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210907.csv")
+  write_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv")
 
 ### some data exploration #############################################################################
-p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210907.csv") 
+p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
 
 #time series for each site
 p %>% 
@@ -224,7 +224,7 @@ p_all_sites <- p %>%
   
 # #adding in the assumption that all cones were closed on Dec 1 and open on March 1
 p_all_sites_bound_start <- p_all_sites %>%
-  select(tree, tree_n, site, site_n, site_name, site_type) %>%
+  dplyr::select(tree, tree_n, site, site_n, site_name, site_type) %>%
   distinct() %>%
   mutate(prop_open = 0,
          date3 = mdy("12-01-2019"),
@@ -232,7 +232,7 @@ p_all_sites_bound_start <- p_all_sites %>%
          doy = yday(date3),
          real_data = "not real data")
 p_all_sites_bound_end <- p_all_sites %>%
-  select(tree, tree_n, site, site_n, site_name, site_type) %>%
+  dplyr::select(tree, tree_n, site, site_n, site_name, site_type) %>%
   distinct() %>%
   mutate(prop_open = 0.99,
          date3 = mdy("03-01-2020"),
@@ -249,7 +249,7 @@ p_all_sites <- bind_rows(p_all_sites, p_all_sites_bound_start, p_all_sites_bound
 
 # incorporate some summary information: visits per site 
 visits_per_site <- p_all_sites %>%  
-  select(site_n, day_experiment) %>% 
+  dplyr::select(site_n, day_experiment) %>% 
   distinct() %>% 
   group_by(site_n) %>% 
   summarize(n_visits_per_site = n())
@@ -324,37 +324,37 @@ p_snap_sites <- p_all_sites_summarized %>%
 
 
 data_for_model_core_prop_open <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
   distinct() %>% 
   group_by(site_n_core, tree_n_core, day_experiment) %>% 
   summarize(prop_open = mean(prop_open)) %>% #combining sequential measurements on the same tree on the same day
   ungroup() %>% 
   pivot_wider(id_cols = c(site_n_core, tree_n_core), names_from = day_experiment, values_from = prop_open, names_prefix = "d") %>% 
   arrange(tree_n_core) %>% 
-  select(-tree_n_core, site_n_core) %>% 
-  select(sort(tidyselect::peek_vars()))
+  dplyr::select(-tree_n_core, site_n_core) %>% 
+  dplyr::select(sort(tidyselect::peek_vars()))
 data_for_model_core_prop_open_list <- split(as.data.frame(data_for_model_core_prop_open), seq(nrow(data_for_model_core_prop_open)))
 data_for_model_core_prop_open_list <- lapply(data_for_model_core_prop_open_list, function(x) x[!is.na(x)])
 data_for_model_core_prop_open_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_prop_open_list, 
                                                                         `length<-`, max(lengths(data_for_model_core_prop_open_list)))))
 
 data_for_model_core_day_experiment <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
   distinct() %>% 
   group_by(site_n_core, tree_n_core, day_experiment) %>% 
   summarize(prop_open = mean(prop_open)) %>% #combining sequential measurements on the same tree on the same day
   ungroup() %>% 
   pivot_wider(id_cols = c(site_n_core, tree_n_core), names_from = day_experiment, values_from = day_experiment, names_prefix = "d") %>% 
   arrange(tree_n_core) %>% 
-  select(-tree_n_core, site_n_core) %>% 
-  select(sort(tidyselect::peek_vars()))
+  dplyr::select(-tree_n_core, site_n_core) %>% 
+  dplyr::select(sort(tidyselect::peek_vars()))
 data_for_model_core_day_experiment_list <- split(as.data.frame(data_for_model_core_day_experiment), seq(nrow(data_for_model_core_day_experiment)))
 data_for_model_core_day_experiment_list <- lapply(data_for_model_core_day_experiment_list, function(x) x[!is.na(x)])
 data_for_model_core_day_experiment_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_day_experiment_list, 
                                                                              `length<-`, max(lengths(data_for_model_core_day_experiment_list)))))
 
 data_for_model_core_nobs_per_tree <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment) %>% 
   distinct() %>% 
   arrange(tree_n_core, site_n_core) %>% 
   group_by(tree_n_core, site_n_core) %>% 
@@ -362,11 +362,11 @@ data_for_model_core_nobs_per_tree <- p_core_sites %>%
 
 data_for_model_snap <- p_snap_sites %>% 
   #filter(is.na(real_data)) %>% 
-  select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
+  dplyr::select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
   arrange(tree_n_snap, site_n_snap, day_experiment) 
 
 
-sink("model_b.txt")
+sink("model_c.txt")
 cat("  
 model{
   
@@ -462,7 +462,7 @@ for(site in 1:n_sites_snap){
     ",fill=TRUE)
 sink() 
 
-jags <- jags.model('model_b.txt', 
+jags <- jags.model('model_c.txt', 
                    data = list(
                      #core sites
                      Y = as.matrix(data_for_model_core_prop_open_ragged),  #data_for_model_prop_open[3,1]
@@ -513,7 +513,7 @@ results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed =
 tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
 results_params2$tree_n_core <- as.numeric(gsub("Y_hat_sim[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n_core, day_experiment) 
-site_n_core_join <- select(p_core_sites, tree_n_core, site_n_core)
+site_n_core_join <- dplyr::select(p_core_sites, tree_n_core, site_n_core)
 results_params3 <- left_join(results_params2, site_n_core_join)
 
 ggplot()  + theme_bw() +
@@ -537,7 +537,7 @@ results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed =
 tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
 results_params2$tree_n_snap <- as.numeric(gsub("Y_hat_sim_snap[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n_snap, day_experiment) 
-site_n_snap_join <- select(data_for_model_snap, tree_n_snap, site_n_snap) %>% distinct()
+site_n_snap_join <- dplyr::select(data_for_model_snap, tree_n_snap, site_n_snap) %>% distinct()
 results_params3 <- left_join(results_params2, site_n_snap_join) %>% 
   mutate(date3 = day_start + day_experiment)
 
@@ -557,7 +557,7 @@ results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
 results_params2$site_n_core <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter))
-site_n_core_join <- select(p_core_sites, site_name, site_n_core, x, y) %>% 
+site_n_core_join <- dplyr::select(p_core_sites, site_name, site_n_core, x, y) %>% 
   group_by(site_name, site_n_core) %>% 
   summarize(x_site = mean(x, na.rm = TRUE),
             y_site = mean(y, na.rm = TRUE)) %>% distinct()
@@ -569,7 +569,7 @@ results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
 results_params2$site_n_snap <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter))
-site_n_snap_join <- select(p_snap_sites, site_name, site_n_snap, x, y) %>% 
+site_n_snap_join <- dplyr::select(p_snap_sites, site_name, site_n_snap, x, y) %>% 
   group_by(site_name, site_n_snap) %>% 
   summarize(x_site = mean(x, na.rm = TRUE),
             y_site = mean(y, na.rm = TRUE)) %>% distinct()
@@ -600,4 +600,4 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
   coord_sf(datum=NA) #removes sf induced gridlines
 
 ## export site means data
-readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210907.csv")
+readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210910.csv")

@@ -958,6 +958,7 @@ library(ggplot2)
 
 ### fitting all trees at all core sites and all snapshot sites (hierarchical) #############################
 
+
 #database was put together in: 
 #C:/Users/dsk856/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
 p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
@@ -1140,7 +1141,7 @@ model{
 for(tree in 1:n_trees_core){
   a[tree] ~ dunif(0.95, 1) #assuming that some trees may asymptote before 1
   
-  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
+  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core[site_vector_core[tree]]) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
  
   c[tree] ~ dnorm(rate_global_mean, rate_global_sigma) #the steepness of the curve
 } #end priors core trees loop
@@ -1153,6 +1154,7 @@ for(tree in 1:n_trees_snap){
 
 for(site in 1:n_sites_core){
    site_halfway_point_core[site] ~ dnorm(0, 0.001)
+   LAMBDA3_core[site] ~ dgamma(0.01,0.01) #uninformative gamma prior
 } #end priors site loop
 
 for(site in 1:n_sites_snap){
@@ -1162,7 +1164,7 @@ for(site in 1:n_sites_snap){
 LAMBDA1 ~ dgamma(0.01,0.01) #uninformative gamma prior
 LAMBDA1_snap <- 7.3 #using the value from the core trees
 
-LAMBDA3_core ~ dgamma(0.01,0.01) #uninformative gamma prior
+
 LAMBDA3_snap <- 0.049 #using the value from the core trees
   
 rate_global_mean ~ dnorm(0, 0.001)
@@ -1343,11 +1345,58 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_sacs_210909.csv")
 
 
+#export an idealized opening trajectory from all core sites
+
+######### save idealized opening trajectory across all core sites 
+#get b (midpoint) for each core tree
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("b"),  n.iter = 3000, thin = 3) #variables to monitor
+results_param2 <- summary(mcmc_samples_params2)
+results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
+results_params2$parameter <- row.names(results_params2)
+results_params2$tree_n_core <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter))
+tree_b <- results_params2
+tree_b_join <- tree_b %>% 
+              dplyr::select(b_mean = Mean,
+                            b_sd = SD,
+                            tree_n_core)
+
+#get Y_hat for each core tree on each day
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 3000, thin = 3) #variables to monitor
+results_param2 <- summary(mcmc_samples_params2)
+results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
+results_params2$parameter<-row.names(results_params2)
+results_params2$param<-substr(results_params2$parameter,1,1)
+
+day_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 2) 
+results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed = TRUE) )
+
+tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
+results_params2$tree_n_core <- as.numeric(gsub("Y_hat_sim[", "", tree_n_vector, fixed = TRUE) )
+results_params2 <- arrange(results_params2, tree_n_core, day_experiment) 
+site_n_core_join <- dplyr::select(p_core_sites, tree_n_core, site_n_core)
+results_params3 <- left_join(results_params2, site_n_core_join)
+yhat_join <- results_params3 %>% distinct() %>% 
+              dplyr::select(yhat_mean = Mean,
+                            yhat_sd = SD,
+                            day_experiment, tree_n_core, site_n_core)
+
+idealized_sac_opening_curve <- left_join(yhat_join, tree_b_join) %>% 
+  mutate(day_before_peak = round(day_experiment - b_mean), 0) %>% 
+  group_by(day_before_peak) %>% 
+  filter(site_n_core < 5 | site_n_core > 8) %>% 
+  summarize(yhat_median = median(yhat_mean, na.rm = TRUE)) %>% 
+  # mutate(yhat_median = case_when(day_before_peak < -15 ~ 0,
+  #                                day_before_peak > 35 ~ 0.9715,TRUE ~ yhat_median)) %>%  # a manual fix for some weird noise
+  mutate(sac_opening_day = yhat_median - lag(yhat_median)) %>% 
+  mutate(sac_opening_day = case_when(sac_opening_day < 0 ~ 0, TRUE ~ sac_opening_day))
+  
+ggplot(idealized_sac_opening_curve, aes(x = day_before_peak, y = sac_opening_day)) + geom_point() + theme_bw()
+#write_csv(idealized_sac_opening_curve, "C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
+
+
 
 
 ### pollen cones, not pollen sacs: fitting all trees at all core sites and all snapshot sites (hierarchical) #############################
-#switching over to percent of cones opened from cone processing
-
 
 #database was put together in: 
 #C:/Users/dsk856/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
@@ -1395,7 +1444,7 @@ p_all_sites <- p %>%
 
 #adding in the assumption that all cones were closed on Dec 1 and open on March 1
 p_all_sites_bound_start <- p_all_sites %>% 
-  select(tree, tree_n, site, site_n, site_name, site_type) %>% 
+  dplyr::select(tree, tree_n, site, site_n, site_name, site_type) %>% 
   distinct() %>% 
   mutate(prop_open = 0,
          date3 = mdy("12-01-2020"),
@@ -1403,7 +1452,7 @@ p_all_sites_bound_start <- p_all_sites %>%
          doy = yday(date3),
          real_data = "not real data")
 p_all_sites_bound_end <- p_all_sites %>% 
-  select(tree, tree_n, site, site_n, site_name, site_type) %>% 
+  dplyr::select(tree, tree_n, site, site_n, site_name, site_type) %>% 
   distinct() %>% 
   mutate(prop_open = 0.99,
          date3 = mdy("03-01-2021"),
@@ -1436,7 +1485,7 @@ p_all_sites <- bind_rows(p_all_sites, p_all_sites_bound_start, p_all_sites_bound
 
 # incorporate some summary information: visits per site 
 visits_per_site <- p_all_sites %>%  
-  select(site_n, day_experiment) %>% 
+  dplyr::select(site_n, day_experiment) %>% 
   distinct() %>% 
   group_by(site_n) %>% 
   summarize(n_visits_per_site = n())
@@ -1511,39 +1560,39 @@ p_snap_sites <- p_all_sites_summarized %>%
 
 
 data_for_model_core_prop_open <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
   distinct() %>% 
   group_by(site_n_core, tree_n_core, day_experiment) %>% 
   summarize(prop_open = mean(prop_open)) %>% #combining sequential measurements on the same tree on the same day
   ungroup() %>% 
   pivot_wider(id_cols = c(site_n_core, tree_n_core), names_from = day_experiment, values_from = prop_open, names_prefix = "d") %>% 
   arrange(tree_n_core) %>% 
-  select(-tree_n_core, site_n_core) %>% 
+  dplyr::select(-tree_n_core, site_n_core) %>% 
   rename(d04 = d4, d05 = d5, d06 = d6, d07 = d7) %>% 
-  select(sort(tidyselect::peek_vars()))
+  dplyr::select(sort(tidyselect::peek_vars()))
 data_for_model_core_prop_open_list <- split(as.data.frame(data_for_model_core_prop_open), seq(nrow(data_for_model_core_prop_open)))
 data_for_model_core_prop_open_list <- lapply(data_for_model_core_prop_open_list, function(x) x[!is.na(x)])
 data_for_model_core_prop_open_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_prop_open_list, 
                                                                         `length<-`, max(lengths(data_for_model_core_prop_open_list)))))
 
 data_for_model_core_day_experiment <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment, prop_open) %>% 
   distinct() %>% 
   group_by(site_n_core, tree_n_core, day_experiment) %>% 
   summarize(prop_open = mean(prop_open)) %>% #combining sequential measurements on the same tree on the same day
   ungroup() %>% 
   pivot_wider(id_cols = c(site_n_core, tree_n_core), names_from = day_experiment, values_from = day_experiment, names_prefix = "d") %>% 
   arrange(tree_n_core) %>% 
-  select(-tree_n_core, site_n_core) %>% 
+  dplyr::select(-tree_n_core, site_n_core) %>% 
   rename(d04 = d4, d05 = d5, d06 = d6, d07 = d7) %>% 
-  select(sort(tidyselect::peek_vars()))
+  dplyr::select(sort(tidyselect::peek_vars()))
 data_for_model_core_day_experiment_list <- split(as.data.frame(data_for_model_core_day_experiment), seq(nrow(data_for_model_core_day_experiment)))
 data_for_model_core_day_experiment_list <- lapply(data_for_model_core_day_experiment_list, function(x) x[!is.na(x)])
 data_for_model_core_day_experiment_ragged <- data.frame(Reduce(rbind, lapply(data_for_model_core_day_experiment_list, 
                                                                              `length<-`, max(lengths(data_for_model_core_day_experiment_list)))))
 
 data_for_model_core_nobs_per_tree <- p_core_sites %>% 
-  select(site_n_core, tree_n_core, day_experiment) %>% 
+  dplyr::select(site_n_core, tree_n_core, day_experiment) %>% 
   distinct() %>% 
   arrange(tree_n_core, site_n_core) %>% 
   group_by(tree_n_core, site_n_core) %>% 
@@ -1551,7 +1600,7 @@ data_for_model_core_nobs_per_tree <- p_core_sites %>%
 
 data_for_model_snap <- p_snap_sites %>% 
   #filter(is.na(real_data)) %>% 
-  select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
+  dplyr::select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
   arrange(tree_n_snap, site_n_snap, day_experiment) 
 
 # # Assuming that no cones were open on Dec 10 and that all cones had opened by Mar. 1
@@ -1562,7 +1611,7 @@ data_for_model_snap <- p_snap_sites %>%
 #                            data_for_model_snap$prop_open,
 #                            rep(x = 60, times = nrow(data_for_model_snap)))
 
-sink("model_a.txt")
+sink("model_b.txt")
 cat("  
 model{
   
@@ -1657,8 +1706,9 @@ for(site in 1:n_sites_snap){
 }#end model
     ",fill=TRUE)
 sink() 
+sink() 
 
-jags <- jags.model('model_a.txt', 
+jags <- jags.model('model_b.txt', 
                    data = list(
                      #core sites
                      Y = as.matrix(data_for_model_core_prop_open_ragged),  #data_for_model_prop_open[3,1]
@@ -1709,7 +1759,7 @@ results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed =
 tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
 results_params2$tree_n_core <- as.numeric(gsub("Y_hat_sim[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n_core, day_experiment) 
-site_n_core_join <- select(p_core_sites, tree_n_core, site_n_core)
+site_n_core_join <- dplyr::select(p_core_sites, tree_n_core, site_n_core)
 results_params3 <- left_join(results_params2, site_n_core_join)
 
 ggplot()  + theme_bw() +
@@ -1799,5 +1849,52 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv")
 
 
+
+
+######### save idealized opening trajectory across all core sites 
+#get b (midpoint) for each core tree
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("b"),  n.iter = 3000, thin = 3) #variables to monitor
+results_param2 <- summary(mcmc_samples_params2)
+results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
+results_params2$parameter <- row.names(results_params2)
+results_params2$tree_n_core <- as.numeric(gsub("[^0-9.-]", "", results_params2$parameter))
+tree_b <- results_params2
+tree_b_join <- tree_b %>% 
+  dplyr::select(b_mean = Mean,
+                b_sd = SD,
+                tree_n_core)
+
+#get Y_hat for each core tree on each day
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 3000, thin = 3) #variables to monitor
+results_param2 <- summary(mcmc_samples_params2)
+results_params2 <- data.frame(results_param2$statistics, results_param2$quantiles) #multi-var model
+results_params2$parameter<-row.names(results_params2)
+results_params2$param<-substr(results_params2$parameter,1,1)
+
+day_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 2) 
+results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed = TRUE) )
+
+tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
+results_params2$tree_n_core <- as.numeric(gsub("Y_hat_sim[", "", tree_n_vector, fixed = TRUE) )
+results_params2 <- arrange(results_params2, tree_n_core, day_experiment) 
+site_n_core_join <- dplyr::select(p_core_sites, tree_n_core, site_n_core)
+results_params3 <- left_join(results_params2, site_n_core_join)
+yhat_join <- results_params3 %>% distinct() %>% 
+  dplyr::select(yhat_mean = Mean,
+                yhat_sd = SD,
+                day_experiment, tree_n_core, site_n_core)
+
+idealized_cone_opening_curve <- left_join(yhat_join, tree_b_join) %>% 
+  mutate(day_before_peak = round(day_experiment - b_mean), 0) %>% 
+  group_by(day_before_peak) %>% 
+  filter(site_n_core < 5 | site_n_core > 8) %>% 
+  summarize(yhat_median = median(yhat_mean, na.rm = TRUE)) %>% 
+  # mutate(yhat_median = case_when(day_before_peak < -15 ~ 0,
+  #                                day_before_peak > 35 ~ 0.9715,TRUE ~ yhat_median)) %>%  # a manual fix for some weird noise
+  mutate(cone_opening_day = yhat_median - lag(yhat_median)) %>% 
+  mutate(cone_opening_day = case_when(cone_opening_day < 0 ~ 0, TRUE ~ cone_opening_day))
+
+ggplot(idealized_cone_opening_curve, aes(x = day_before_peak, y = cone_opening_day)) + geom_point() + theme_bw()
+#write_csv(idealized_cone_opening_curve, "C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
 
 

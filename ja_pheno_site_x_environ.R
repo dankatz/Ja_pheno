@@ -13,7 +13,7 @@ library(raster)
 #rm(list=ls())
 
 #load in site level-estimates: cones for field season 2021
-c_site_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210907.csv") %>% 
+c_site_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210910.csv") %>% 
   mutate(years = "19-20")
  c_site_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv") %>%
    mutate(years = "20-21") %>% 
@@ -31,6 +31,8 @@ c_site_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs19_20_site_hal
 #   theme_bw() + geom_pointrange(position = position_dodge(width = 0.4)) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
 #   ylab("Halfway point of season (mean +/- SD")+ xlab("site")
 
+day_start_1920 <- mdy("12-10-2019")
+day_start_2021 <- mdy("12-10-2020")
 
 c_sites <- bind_rows(c_site_1920, c_site_2021)
 
@@ -121,8 +123,8 @@ sms <-
          site = paste(long, lat)) %>% 
   rename(sms = value) %>% 
   mutate(sms_date = lubridate::ymd_hms(name),
-         d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
-                        years == "20-21" ~ d + mdy("12-10-2020"))) %>% 
+         d2 = case_when(years == "19-20" ~ d + day_start_1920,
+                        years == "20-21" ~ d + day_start_2021)) %>% 
   dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
   dplyr::select(-c(name))
 
@@ -191,12 +193,39 @@ smap_spring20 <-
   summarize(sms_mean = mean(sms)) 
   
 
+#plotting raw sms rasters
+ssm_2019_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2021_spring.tif")
+tm_shape(ssm_2019_spring) + 
+  tm_raster(title = "spring soil moisture",  
+            legend.reverse = TRUE,
+            breaks = c(0, 5, 10, 15, 20, 25, 30),
+            style = "cont", #style = "log10",
+            palette = "-viridis") +
+  tm_legend(outside = TRUE, legend.text.size = 1.0) + tm_compass() +
+  tm_layout(legend.position = c("left", "top"), legend.title.size = 1.2,
+            title= "April & May 2021",
+            title.size = 1.2, title.position = c('left', 'top') ) +
+  tm_shape(tx_boundary) +  tm_polygons(col = "white", alpha = 0) 
+
+ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
+tm_shape(ssm_2020_spring) + 
+  tm_raster(title = "spring soil moisture",  
+            legend.reverse = TRUE,
+            breaks = c(0, 5, 10, 15, 20, 25, 30),
+            style = "cont", #style = "log10",
+            palette = "-viridis") +
+  tm_legend(outside = TRUE, legend.text.size = 1.0) + tm_compass() +
+  tm_layout(legend.position = c("left", "top"), legend.title.size = 1.2,
+            title= "April & May 2020",
+            title.size = 1.2, title.position = c('left', 'top') ) +
+  tm_shape(tx_boundary) +  tm_polygons(col = "white", alpha = 0) 
+
 
 
 ### vpd: loading in vapor pressure deficit (from daymet) ########################################
 #download script is Google Earth Engine in: TX_Ja_pheno
 
-vpd_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_tmax_2018_2020_download.csv",
+vpd_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_vp_2018_2020_download.csv",
                     na = "No data")
 
 vpd <- 
@@ -211,8 +240,8 @@ vpd <-
          site = paste(long, lat)) %>% 
   rename(vpd = value) %>% 
   mutate(vpd_date = lubridate::ymd_hms(name),
-         d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
-                        years == "20-21" ~ d + mdy("12-10-2020"))) %>% 
+         d2 = case_when(years == "19-20" ~ d + day_start_1920,
+                        years == "20-21" ~ d + day_start_2021)) %>% 
   dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
   dplyr::select(-c(name))
 
@@ -253,8 +282,8 @@ vpd %>%
 
 vpd %>% 
   filter(years == "20-21") %>% 
-  filter(vpd_date > ymd("20/06/01")) %>% 
-  filter(vpd_date < ymd("20/09/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  filter(vpd_date > ymd("20/07/01")) %>% 
+  filter(vpd_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   group_by(site, site_name, d, d2) %>% 
   summarize(vpd_mean = mean(vpd))%>%  #-> test # #%T>% => test 
   ggplot(aes(x = vpd_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
@@ -269,15 +298,17 @@ vpd_summerfall19 <-
   filter(vpd_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   group_by(site, site_name, d, d2) %>% 
   summarize(vpd_mean = mean(vpd))
+fit_vpd_summerfall19 <- lm(d ~ vpd_mean, data = vpd_summerfall19); summary(fit_vpd_summerfall19)
+
 
 vpd_summerfall20 <- 
   vpd %>% 
   filter(years == "20-21") %>% 
-  filter(vpd_date > ymd("20/06/01")) %>% 
-  filter(vpd_date < ymd("20/09/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  filter(vpd_date > ymd("20/07/01")) %>% 
+  filter(vpd_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   group_by( site_name, lat, long, d, d2) %>% 
   summarize(vpd_mean = mean(vpd))
-test <- lm(d ~ vpd_mean, data = vpd_summerfall20); summary(test)
+fit_vpd_summerfall20 <- lm(d ~ vpd_mean, data = vpd_summerfall20); summary(fit_vpd_summerfall19)
 
 ### combining different variables ##################################################
 # vpd_spring19
@@ -291,6 +322,7 @@ ggplot(yr2_env, aes(x = sms_mean, y = vpd_mean)) + geom_point() + theme_bw() + g
 ggplot(yr2_env, aes(x = sms_mean, y = d)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
 fit_sms_spring2020 <- lm(d ~ sms_mean, data = yr2_env)
 summary(fit_sms_spring2020)
+str(fit_sms_spring2020)
 
 sms_resids <- yr2_env %>% 
   dplyr::select(site, site_name, lat, long, d, d2, sms_mean, vpd_mean) %>% 
@@ -313,6 +345,116 @@ sms_resids %>%
   ggplot(aes(x = sms_mean, y = d, color = sms_resid)) + geom_point() + theme_bw() + geom_smooth(method = "lm") +
   scale_color_gradient2()#scale_color_viridis_c() 
 
+
+### predicting 2019-2020 mean day based on 2020-2021 regression ####################################################
+day_start_1920
+day_start_2021
+
+# SMS from SMAP
+#19-20 field season
+sms_1920 <- sms %>% 
+  filter(years == "19-20") %>% 
+  filter(sms_date > ymd("19/04/01")) %>% 
+  filter(sms_date < ymd("19/06/01")) %>% 
+  # ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+  # scale_color_viridis_c(name = "peak date", trans = "date") +
+  # xlab("date") + ylab("surface soil moisture (mm)")
+  group_by(site_name, long, lat) %>% 
+  summarize(sms_mean = mean(sms),
+            d = mean(d), #accounting for different start dates
+            sd = mean(sd),
+            d2 = mean(d2)) %>% 
+  ungroup()
+
+fit_sms_spring2020
+fit_sms_spring2020_on_1920data <- data.frame(predict.lm(fit_sms_spring2020, newdata = sms_1920, 
+                                                        interval = "prediction", level = 0.68)) #0.68/34 ~ 1 sd on standard normal 
+sms_1920 <- sms_1920 %>% 
+  mutate(d1920_pred2021_mean = fit_sms_spring2020_on_1920data$fit, #= sms_mean * fit_sms_spring2020$coefficients[2] + fit_sms_spring2020$coefficients[1])
+         d1920_pred2021_lwr25 = fit_sms_spring2020_on_1920data$lwr,
+         d1920_pred2021_upr75 = fit_sms_spring2020_on_1920data$upr)
+
+ggplot(sms_1920, aes(y = d + day_start_1920, ymin = d - sd + day_start_1920, ymax = d + sd + day_start_1920, label = site_name, #color = sms_mean,
+                     x = d1920_pred2021_mean + day_start_1920 , xmin = d1920_pred2021_lwr25 + day_start_1920, 
+                     xmax = d1920_pred2021_upr75 + day_start_1920)) + 
+  geom_pointrange() + geom_errorbarh() + theme_bw() + geom_smooth(method = "lm") +
+  #coord_cartesian(xlim = c(0, 50), ylim = c(0, 50)) + 
+  geom_abline(slope = 1, intercept = 0, lty = 2) +
+  xlab("predicted midpoint(based on applying year 2 model to year 1 soil moisture)")+
+  ylab("observed midpoint (site mean based on cone model)")
+  #geom_label()
+
+summary(lm(d ~  d1920_pred2021_mean , data = sms_1920))
+
+#map of residuals
+ggplot(sms_1920, aes(x = long, y = lat, color = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920)))) + 
+  geom_point(size = 4) + theme_bw() + scale_color_viridis_c(name = "days underpredicted")
+
+ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
+  geom_jitter(aes(x = long, y = lat, 
+                  col = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920))),# size = pollen),#col = hilo2), pollen / max_p
+              data = sms_1920, alpha = .7, size = 3)  + 
+  scale_color_viridis_c(name = "days underpredicted") +
+  xlab("") + ylab("") + #theme_few() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()) +
+  coord_sf(datum=NA) #removes sf induced gridlines
+
+
+
+# vpd from daymet
+#19-20 field season
+vpd_1920 <- vpd %>% 
+  filter(years == "19-20") %>% 
+  filter(vpd_date > ymd("19/04/01")) %>% 
+  filter(vpd_date < ymd("19/06/01")) %>% 
+  # ggplot(aes(x = vpd_date, y = vpd, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+  # scale_color_viridis_c(name = "peak date", trans = "date") +
+  # xlab("date") + ylab("surface soil moisture (mm)")
+  group_by(site_name, long, lat) %>% 
+  summarize(vpd_mean = mean(vpd),
+            d = mean(d), #accounting for different start dates
+            sd = mean(sd),
+            d2 = mean(d2)) %>% 
+  ungroup()
+
+vpd_summerfall20
+vpd_summerfall2020_on_1920data <- data.frame(predict.lm(fit_vpd_summerfall20, newdata = vpd_1920, 
+                                                        interval = "prediction", level = 0.68)) #0.68/34 ~ 1 sd on standard normal 
+vpd_1920 <- vpd_1920 %>% 
+  mutate(d1920_pred2021_mean = vpd_summerfall2020_on_1920data$fit, #= vpd_mean * fit_vpd_spring2020$coefficients[2] + fit_vpd_spring2020$coefficients[1])
+         d1920_pred2021_lwr25 = vpd_summerfall2020_on_1920data$lwr,
+         d1920_pred2021_upr75 = vpd_summerfall2020_on_1920data$upr)
+
+ggplot(vpd_1920, aes(y = d + day_start_1920, ymin = d - sd + day_start_1920, ymax = d + sd + day_start_1920, label = site_name, #color = vpd_mean,
+                     x = d1920_pred2021_mean + day_start_1920 , xmin = d1920_pred2021_lwr25 + day_start_1920, 
+                     xmax = d1920_pred2021_upr75 + day_start_1920)) + 
+  geom_pointrange() + geom_errorbarh() + theme_bw() + geom_smooth(method = "lm") +
+  #coord_cartesian(xlim = c(0, 50), ylim = c(0, 50)) + 
+  geom_abline(slope = 1, intercept = 0, lty = 2) +
+  xlab("predicted midpoint(based on applying year 2 model to year 1 soil moisture)")+
+  ylab("observed midpoint (site mean based on cone model)")
+#geom_label()
+
+
+summary(lm(d ~  d1920_pred2021_mean, data = vpd_1920))
+sum()
+
+#map of residuals
+ggplot(vpd_1920, aes(x = long, y = lat, color = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920)))) + 
+  geom_point(size = 4) + theme_bw() + scale_color_viridis_c(name = "days underpredicted")
+
+ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
+  geom_jitter(aes(x = long, y = lat, 
+                  col = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920))),# size = pollen),#col = hilo2), pollen / max_p
+              data = vpd_1920, alpha = .7, size = 3)  + 
+  scale_color_viridis_c(name = "days underpredicted") +
+  xlab("") + ylab("") + #theme_few() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()) +
+  coord_sf(datum=NA) #removes sf induced gridlines
 
 
 
@@ -500,12 +642,16 @@ test <- lm(d ~ env_mean, data = env_summerfall20); summary(test)
 
 
 ### create an empirical model/animation of cones opening pollen release in fs 2020/2021 #######################################
+library(tmap)
+library(magick)
 
 #load in the Ja abundance map
 ja_ba_orig <- raster("C:/Users/dsk856/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
 ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring)
 plot(ja_ba); plot(tx_boundary, add = TRUE, col = NA)
 ja_ba_rel <- ja_ba/98.40555  #max(ja_ba$Ashe_juniper_basal_area_3km)
+ja_ba_pres <- ja_ba
+ja_ba_pres[ja_ba_pres > 0] <- 1 #plot(ja_ba_pres)
 
 ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
 par(mfrow = c(1,1))
@@ -528,8 +674,8 @@ cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_d
   dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
 
 
-#creating a stack that has percent opening on each day
-library(tmap)
+#loop for creating rasters and map frames
+
 opening_cones_stack <- stack()
 for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   
@@ -540,7 +686,7 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
   names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
    
-  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
   plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
   opening_cones_pheno_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
 
@@ -576,13 +722,12 @@ dev.off()
 
 
 #creating an animation
-library(magick)
 list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_210909/", 
            pattern = "*.png", full.names = T) %>%
   purrr::map(image_read) %>% # reads each path file
   image_join() %>% # joins image
   image_animate(fps=1) %>% # animates, can opt for number of loops
-  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_210909/cone_opening_noba_fs2021_v2.gif") 
+  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_210909/cone_opening_fs2021_v2.gif") 
 
 
 
