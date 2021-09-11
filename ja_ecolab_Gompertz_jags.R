@@ -1512,6 +1512,14 @@ p_core_sites <- p_all_sites_summarized %>%
 length(unique(p_all_sites$site_n))
 length(unique(p_core_sites$site_n))
 
+
+p_core_sites_tree_key <- p_core_sites %>% 
+  dplyr::select(site_name, tree_n_core, x, y) %>% 
+  group_by(tree_n_core, site_name) %>%  #not sure why 'distinct' wasn't working for coordinates here
+  summarize(x = mean(x, na.rm = TRUE),
+            y = mean(y, na.rm = TRUE))
+
+
 p_snap_sites <- p_all_sites_summarized %>% 
   filter(site_prop_open_visit > 0.025) %>% #remove sites that hadn't started or had already finished
   filter(site_mean_visit > 0.025 & site_mean_visit < 0.975) %>% #remove sites that hadn't started or had already finished
@@ -1863,6 +1871,10 @@ tree_b_join <- tree_b %>%
   dplyr::select(b_mean = Mean,
                 b_sd = SD,
                 tree_n_core)
+tree_b_save <- left_join(tree_b_join, p_core_sites_tree_key) 
+#write_csv(tree_b_save, "C:/Users/dsk856/Box/texas/pheno/manual_obs/modeled_cone_peak_day_param_b_210910.csv")
+
+
 
 #get Y_hat for each core tree on each day
 mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 3000, thin = 3) #variables to monitor
@@ -1894,7 +1906,8 @@ idealized_cone_opening_curve <- left_join(yhat_join, tree_b_join) %>%
   mutate(cone_opening_day = yhat_median - lag(yhat_median)) %>% 
   mutate(cone_opening_day = case_when(cone_opening_day < 0 ~ 0, TRUE ~ cone_opening_day))
 
-ggplot(idealized_cone_opening_curve, aes(x = day_before_peak, y = cone_opening_day)) + geom_point() + theme_bw()
+ggplot(idealized_cone_opening_curve, aes(x = day_before_peak, y = cone_opening_day * 100)) + geom_point() + theme_bw() +
+  xlab("day from peak") + ylab("cones opening on day (%)")
 #write_csv(idealized_cone_opening_curve, "C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
 
 
