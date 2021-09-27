@@ -734,6 +734,151 @@ list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_o
 
 
 
+### create an empirical model/animation of cones opening pollen release in fs 2020/2021 as a function of sms regression########
+
+
+#predicted site mean date based on sms in spring 2020
+yr2_env$d_sms <- fit_sms_spring2020$fitted.values
+
+
+### making an empirical function for pollen release as a function of time difference from modeled site mean ~ sms spring 2020
+p_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+c_site_2021_join <- yr2_env %>% dplyr::select(site_name, site_mean_d = d_sms)
+p_2021 <- left_join(p_2021, c_site_2021_join) %>% 
+  mutate(site_mean_date = site_mean_d + mdy("12-10-2020"),
+         site_mean_dif = round(as.numeric(sample_date - site_mean_date), 0),
+         bag_cones_opening = case_when(is.na(bag_cones_opening) & bag_mean == 0 ~ 0,
+                                       TRUE ~ bag_cones_opening),
+         pol_release = case_when(pollen_rel == "none" ~ 0, 
+                                 pollen_rel == "little" ~ 1, 
+                                 pollen_rel == "some" ~ 1, 
+                                 pollen_rel == "lots" ~ 1)) #unique(p_2021$pollen_rel)
+
+ggplot(p_2021, aes(x = site_mean_dif, y = bag_cones_opening)) + geom_jitter() + theme_bw() +
+  geom_smooth()
+
+cones_d_empir <- p_2021 %>% 
+  group_by(site_mean_dif) %>% 
+  summarize(bag_cones_opening_mean = mean(bag_cones_opening, na.rm = TRUE),
+            pol_release_mean = mean(pol_release, na.rm = TRUE))
+site_mean_dif_df <- data.frame(site_mean_dif = -100:100)
+cones_d_empir <- left_join(site_mean_dif_df, cones_d_empir) %>% 
+  mutate(bag_cones_opening_mean = case_when(site_mean_dif > 34 ~ 0,
+                                            site_mean_dif < -18 ~ 0,
+                                            TRUE ~ bag_cones_opening_mean),
+         pol_release_mean = case_when(site_mean_dif > 34 ~ 0,
+                                      site_mean_dif < -18 ~ 0,
+                                      TRUE ~ pol_release_mean)) %>% 
+  mutate(bag_cones_opening_mean_m = zoo::rollapply(bag_cones_opening_mean, 7, #one week moving average
+                                                   mean, na.rm = TRUE, partial = TRUE, align='center'),
+         pol_release_mean_m = zoo::rollapply(pol_release_mean, 7, 
+                                             mean, na.rm = TRUE, partial = TRUE, align='center'))
+
+ggplot(cones_d_empir, aes(x = site_mean_dif, y = bag_cones_opening_mean)) + geom_point()+
+  geom_line(aes(x = site_mean_dif, y = bag_cones_opening_mean_m)) + theme_bw() + 
+  xlab( "difference from modeled site mean (days)") + ylab("opening sacs (proportion of observations)") +
+  coord_cartesian(xlim = c(-25, 40) )
+
+ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point()+
+  geom_line(aes(x = site_mean_dif, y = pol_release_mean_m)) + theme_bw() + 
+  xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
+  coord_cartesian(xlim = c(-25, 40) )
+
+#write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_sms_pred_site_mean_day_210913.csv")
+
+
+library(tmap)
+library(magick)
+
+#load in the Ja abundance map
+ja_ba_orig <- raster("C:/Users/dsk856/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring)
+plot(ja_ba); plot(tx_boundary, add = TRUE, col = NA)
+ja_ba_rel <- ja_ba/98.40555  #max(ja_ba$Ashe_juniper_basal_area_3km)
+ja_ba_pres <- ja_ba
+ja_ba_pres[ja_ba_pres > 0] <- 1 #plot(ja_ba_pres)
+
+ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
+par(mfrow = c(1,1))
+plot(ssm_2020_spring) #par(mfrow=c(1,1))
+
+#check that this box includes all of TX
+# tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+# plot(tx_boundary, add = TRUE, col = NA)
+
+#using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
+fit_sms_spring2020
+ssm_2020_peak_d <- ssm_2020_spring * fit_sms_spring2020$coefficients[2] + fit_sms_spring2020$coefficients[1]
+#d is with a start date of mdy("12-10-2020")
+plot(ssm_2020_peak_d)
+
+#empirical function of pollen release
+#cones_d_empir <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv") 
+cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
+                                           days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
+  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
+
+
+#loop for creating rasters and map frames
+
+opening_cones_stack <- stack()
+for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
+  
+  #create opening cones rasters
+  focal_day <- round(cones_d_empir$site_mean_dif[i], 0)
+  focal_day_date <- focal_day + mdy("12-10-2020")
+  days_from_peak_rast <- focal_day - ssm_2020_peak_d  #plot(days_from_peak_rast)
+  opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
+  names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
+  
+  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+  plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
+  opening_cones_pheno_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
+  
+  #save each frame as a png
+  date_title <- paste("opening cones on:\n", focal_day_date,"\n ") #convert Julian to date
+  
+  png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/",
+                     "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
+  
+  print(
+    tm_shape(tx_boundary) +  tm_polygons(col = "white") + 
+      tm_shape(opening_cones_day_x_rast * 100) + 
+      tm_raster(title = "relative cone opening/day (%)",  #have to use unicode to sneak in the superscript
+                legend.reverse = TRUE,
+                #legend.is.portrait = FALSE,
+                breaks = c(0, 5, 10, 15, 20, 25),
+                style = "cont", #style = "log10",
+                #labels = c("0.01","0.05","0.10","0.50", "1.0"),
+                palette = "-viridis") +
+      
+      tm_legend(outside = TRUE, legend.text.size = 1.0) + 
+      tm_compass() +
+      tm_scale_bar(breaks = c(0,2), text.size = 1) +
+      tm_layout(scale = 1.2,
+                legend.position = c("left", "top"), 
+                legend.title.size = 1.5,
+                title= date_title,
+                title.size = 1.2,
+                title.position = c('left', 'top') )
+  )
+  dev.off()
+} #end day loop
+
+
+#creating an animation
+list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/", 
+           pattern = "*.png", full.names = T) %>%
+  purrr::map(image_read) %>% # reads each path file
+  image_join() %>% # joins image
+  image_animate(fps=1) %>% # animates, can opt for number of loops
+  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/cone_opening_fs2021_v3.gif") 
+
+
+
+
+
+
 ### loading in surface soil moisture (sms) ########################################
 susm_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_SMAP_SUSM_2019_2021_download_210419.csv")
 

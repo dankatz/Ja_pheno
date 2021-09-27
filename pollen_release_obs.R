@@ -9,6 +9,8 @@ library(forcats)
 idealized_cone_opening_curve <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
 
 #load in the observations
+day_start_1920 <- mdy("12-10-2019")
+day_start_2021 <- mdy("12-10-2020")
 day_start <- mdy("12-10-2020")
 p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") %>% 
   mutate(sample_hours = hour(sample_datetime),
@@ -55,7 +57,7 @@ p <- p %>%
 #   mutate(day_from_peak = day_before_peak_v,
 #          sac_opening_day = sac_opening_day_v)
 
-### adding in environmental data ###########################################
+### adding in environmental data: daily ###########################################
 
 vpd <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_vp_2018_2020_download.csv",
                     na = "No data") %>%  #names(vpd_raw) #str(vpd_raw)
@@ -96,14 +98,66 @@ vs <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_download
   dplyr::select(site_name, sample_date = vs_date, vs)
 
 
+### adding in environmental data: hourly ###########################################
+hourly_files <- list.files(path='C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
+                           full.names = TRUE)
+
+
+hourly_read_fun <- function(hourly_files){
+  hourly_files_names <- substr(hourly_files, 72, 75) 
+  #hourly_files_names_focal2 <- hourly_files_names_focal
+  env_var_hourly <- read_csv(hourly_files,
+                             na = "No data") %>%  #names(vpd_raw) #str(vpd_raw)
+    pivot_longer(cols = contains("00:00")) %>% 
+    rename(site_coords = .geo) %>% 
+    mutate(site_coords = substr(site_coords, 32, 71),
+           site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+    separate(site_coords, sep = ",", c("long", "lat"))  %>%  #unique(test$lat)
+    mutate(lat = round(as.numeric(lat), 1), 
+           long = round(as.numeric(long), 1),
+           site = paste(long, lat)) %>% 
+    mutate(focal_date = lubridate::ymd_hms(name),
+           d2 = case_when(years == "19-20" ~ d + day_start_1920,
+                          years == "20-21" ~ d + day_start_2021)) %>% 
+    dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+    dplyr::select(-c(name)) %>% 
+    dplyr::select(site_name, focal_date, value) %>% 
+    rename({{hourly_files_names}} :=  value) #using the glue syntax
+          #https://stackoverflow.com/questions/49650394/how-to-rename-a-variable-using-a-dynamic-name-and-dplyr
+  return(env_var_hourly)
+}
+
+#getting each study year separately, as that's how I downloaded the data from GEE
+RTMA_2019 <- purrr::map_dfc(hourly_files[grep(pattern = "2019", x = hourly_files)], hourly_read_fun)
+RTMA_2019b <- dplyr::select(RTMA_2019, site_name = site_name...1, focal_date = focal_date...2, !contains("..."))
+
+
+RTMA_2020 <- purrr::map_dfc(hourly_files[grep(pattern = "2021", x = hourly_files)], hourly_read_fun)
+RTMA_2020b <- dplyr::select(RTMA_2020, site_name = site_name...1, focal_date = focal_date...2, !contains("..."))
+
+RTMA <- bind_rows(RTMA_2019b, RTMA_2020b) %>% 
+  rename(sample_datetime_rounded = focal_date,
+         TMP = TMP_)
+
+summary(RTMA)
+
+filter(RTMA, sample_datetime_rounded > ymd_hms("2020-12-15 00:00:00") &
+             sample_datetime_rounded < ymd_hms("2020-12-22 00:00:00")) %>% 
+ggplot(aes(x = sample_datetime_rounded, y = TCDC, color = site_name)) + geom_line()+ theme_bw() + 
+  theme(legend.position = "none")
+
+
 ### data exploration #######################################################
 p2 <- p %>% mutate(pollen_lots = case_when(pollen_rel == "lots" ~ 1, TRUE ~ 0),
-                  pollen_rel = fct_relevel(pollen_rel, "none", "little", "some","lots"))
+                  pollen_rel = fct_relevel(pollen_rel, "none", "little", "some","lots"),
+                  sample_datetime_rounded = round_date(sample_datetime, unit = "hour"))
 
 p2 <- left_join(p2, vpd)
 p2 <- left_join(p2, vs)
 
-unique(vpd$site_name)
+p2 <- left_join(p2, RTMA)
+
+
 #
 p2 %>% group_by(pollen_rel) %>% 
   summarize(sac_opening_mean = mean(sac_opening_day)) %>% 
@@ -134,6 +188,40 @@ p2 %>% #group_by(sample_hours) %>%
   xlab("wind speed (m/s)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
+#by RTMA vars
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = wind, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("wind speed (m/s)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
-fit <- glm(pollen_lots ~ vs + sac_opening_day + vpd + sample_hours, data = p2, family = "binomial")
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = GUST, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("gust wind speed (m/s)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
+
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = PRES, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("pressure (x)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
+
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = SPFH, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("specific humidity (kg/kg)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
+
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = TCDC, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("total cloud cover (%)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
+
+p2 %>% #group_by(sample_hours) %>% 
+  ggplot(aes(x = TMP, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("temperature (C)") + ylab("observations with high pollen release (%)") +
+  binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
+
+
+summary(p2)
+fit <- glm(pollen_lots ~ vs + sac_opening_day + sample_hours + # vpd 
+             wind + GUST + PRES + SPFH +  TMP, #TCDC +
+             data = p2, family = "binomial")
 summary(fit)
