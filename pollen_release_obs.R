@@ -96,14 +96,22 @@ GRIDMET <- dplyr::select(GRIDMET, site_name = site_name...1, sample_date = sampl
 
 
 summary(GRIDMET)
-
 filter(GRIDMET, sample_date > ymd_hms("2020-12-15 00:00:00") &
                 sample_date < ymd_hms("2021-02-22 00:00:00")) %>% 
-  ggplot(aes(x = sample_date, y = vpd, color = site_name)) + geom_line()+ theme_bw() + 
-  theme(legend.position = "none")
+  ggplot(aes(x = sample_date, y = (tmmx - 273.15) * 9/5 + 32, color = vpd, group = site_name)) + geom_line()+ theme_bw() + scale_color_viridis_c()
+#+   theme(legend.position = "none") 
 
 #assuming NA values for precip are no precip
 GRIDMET <- mutate(GRIDMET, pr = case_when(is.na(pr) ~ 0, TRUE ~ pr)) #summary(GRIDMET2)
+
+#changing sample date to just be date, not date time
+GRIDMET <- mutate(GRIDMET, sample_date = date(sample_date)) #summary(GRIDMET2)
+
+#changing site names to play nice with p3
+GRIDMET <- mutate(GRIDMET, site_name = tolower(site_name)) #
+unique(GRIDMET$site_name) %in% unique(p3$site_name)
+sort(unique(GRIDMET$site_name))
+sort(unique(p3$site_name))
 
 #interpolating missing values (with a maximum gap of 3 days)
 summary(GRIDMET) 
@@ -154,6 +162,9 @@ summary(GRIDMET)
 #          )
 
 
+GRIDMET %>% 
+  filter()
+  ggplot(aes(x = ))
 
 ### adding in environmental data: hourly ###########################################
 hourly_files <- list.files(path='C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
@@ -248,7 +259,7 @@ filter(RTMA2, sample_datetime_rounded > ymd_hms("2020-12-15 00:00:00") &
   ggplot(aes(x = sample_datetime_rounded, y = wind_dif, color = site_name)) + geom_line()+ theme_bw() + 
   theme(legend.position = "none")
 
-GGally::ggcorr(RTMA_mean_24hr[1:6], label = TRUE)
+# GGally::ggcorr(RTMA_mean_24hr[1:6], label = TRUE)
 
 ### add in time since sunrise and angle of sun  ##############################
 library(suncalc)
@@ -256,7 +267,7 @@ library(suncalc)
 sun_df <- data.frame(date = p$sample_date, lat = p$y, lon = p$x)
 p_sun <- getSunlightTimes(data = sun_df, keep = c("sunrise", "solarNoon"), tz = "Etc/GMT+6") #I thought it should have been GMT+6, but this is what works
 
-# #for full GRIDMET time series
+# #for full  time series
 # sun_df_full <- data.frame(date = GRIDMET$sample_date, lat = GRIDMET$y, lon = GRIDMET$x)
 # p_sun <- getSunlightTimes(data = sun_df, keep = c("sunrise", "solarNoon"), tz = "Etc/GMT+6") #I thought it should have been GMT+6, but this is what works
 
@@ -314,7 +325,7 @@ p2 %>% #group_by(sample_hours) %>%
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = rmi, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
+  ggplot(aes(x = rmax, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
   xlab("minimum relative humidity (%)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
@@ -382,37 +393,211 @@ p3 <- p %>% mutate(pollen_lots = case_when(pollen_rel == "lots" ~ 1, TRUE ~ 0),
                    sample_datetime_rounded = round_date(sample_datetime, unit = "hour")) %>% 
       dplyr::select(site_name, sample_date, sample_datetime, x, y, prop_open, day_from_peak, sac_opening_day, pollen_lots, 
                     sample_datetime_rounded)
+p3 <- mutate(p3, sunrise = p_sun$sunrise, solarNoon = p_sun$solarNoon,
+             time_after_sunrise = round(as.numeric(time_length(sample_datetime - sunrise, unit = "hours")), 2),
+             time_after_noon =   round(as.numeric(time_length(sample_datetime - solarNoon, unit = "hours")), 2))   #in hours
 
-data_for_model <- left_join(GRIDMET, p3) 
-# p3 <- mutate(p3, sunrise = p_sun$sunrise, solarNoon = p_sun$solarNoon,
-#              time_after_sunrise = round(as.numeric(time_length(sample_datetime - sunrise, unit = "hours")), 2),
-#              time_after_noon =   round(as.numeric(time_length(sample_datetime - solarNoon, unit = "hours")), 2))   #in hours
+
+data_for_model <- left_join(GRIDMET, p3) #summary(data_for_model)
 
 
 ## set up dlnm crossbasis object for use in glm
-max_lag <- 7
+max_lag <- 1
 vpd_lag <- crossbasis(data_for_model$vpd, lag = max_lag, 
-                      argvar=list(fun = "poly", degree = 3), #shape of response curve
-                      arglag = list(fun = "poly", degree = 3)) #shape of lag
+                      #argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+                      argvar=list(fun = "lin"), #"poly", degree = 3), #shape of response curve
+                      #arglag = list(fun = "integer")) #shape of lag 
+                      #arglag = list(fun = "poly", degree = 1)) #shape of lag
+                      arglag = list(fun = "lin")) #shape of lag
+
+srad_lag <- crossbasis(data_for_model$srad, lag = max_lag, 
+                      argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+                      arglag = list(fun = "ns")) #shape of lag
+
+rmax_lag <- crossbasis(data_for_model$rmax, lag = max_lag, 
+                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+                       arglag = list(fun = "ns")) #shape of lag
+
+tmmx_lag <- crossbasis(data_for_model$tmmx, lag = max_lag, 
+                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+                       arglag = list(fun = "ns")) #shape of lag
+
+vs_lag <- crossbasis(data_for_model$vs, lag = max_lag, 
+                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+                       arglag = list(fun = "ns")) #shape of lag
 
 
 #binomial glm with included variables
 model1 <- glm(pollen_lots ~  #number of cases at a station on an observed day
-                sac_opening_day + 
-                vpd_lag + 
-                tmmx, 
+                #sac_opening_day + 
+                prop_open + 
+                # vpd_lag + 
+                # #rmax_lag + 
+                # tmmx_lag +
+                #ns(time_after_noon, df = 3) + 
+                #vpd + 
+                time_after_noon * vpd + 
+                #rmax + 
+                time_after_noon * tmmx +
+                #vpd*tmmx + 
+                srad_lag +  vs_lag, 
+              
+                
               family = "binomial", 
               #link = "logit", #(link = "logit")(link="logit"),
               data = data_for_model)  
 
-fqaic(model1)
-summary(model1)
-str(model1)
+model1
+summary(model1) #str(model1)
 
-# include the 1-day lagged residual in the model
-#resid_model1 <- c(rep(NA, max_lag), residuals(model1, type = "deviance"))
-resid_model1 <- c(rep(NA, 0), residuals(model1, type = "deviance"))#for the model version when pollen isn't included
-model2 <- update(model1, .~. + tsModel::Lag(resid_model1, 1))  #length(resid_model1) #length(residuals(model1, type = "deviance"))
+### visualize effects of env vars: srad
+pred1_srad <- crosspred(srad_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$srad, na.rm = TRUE), to = max(data_for_model$srad, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+srad_RR <- 
+  data.frame(srad = pred1_srad$predvar, 
+             mean = pred1_srad$allRRfit,
+             lower = pred1_srad$allRRlow,
+             upper = pred1_srad$allRRhigh) %>% 
+  ggplot(aes(x = srad, y = mean, ymin = lower, ymax = upper))+
+  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
+  xlab(expression(paste("srad (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
+  annotation_logticks(sides = "b")  
+
+#if I want to include the rug, I need to remove the non-observation points first
+#srad_RR <- srad_RR + geom_rug(data = data_for_model, aes(x = srad), sides = "t", alpha = 0.1, inherit.aes = FALSE)
+
+srad_lag_RR <-
+  as.data.frame(exp(pred1_srad$cumfit)) %>% mutate(srad = pred1_srad$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = srad, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+
+cowplot::plot_grid(srad_RR, srad_lag_RR)
+
+
+### visualize effects of vpd
+pred1_vpd <- crosspred(vpd_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$vpd, na.rm = TRUE), to = max(data_for_model$vpd, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+vpd_RR <- 
+  data.frame(vpd = pred1_vpd$predvar, 
+             mean = pred1_vpd$allRRfit,
+             lower = pred1_vpd$allRRlow,
+             upper = pred1_vpd$allRRhigh) %>% 
+  ggplot(aes(x = vpd, y = mean, ymin = lower, ymax = upper))+
+  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
+  xlab(expression(paste("vpd (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
+  annotation_logticks(sides = "b")  
+
+#if I want to include the rug, I need to remove the non-observation points first
+#vpd_RR <- vpd_RR + geom_rug(data = data_for_model, aes(x = vpd), sides = "t", alpha = 0.1, inherit.aes = FALSE)
+
+vpd_lag_RR <-
+  as.data.frame(exp(pred1_vpd$cumfit)) %>% mutate(vpd = pred1_vpd$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = vpd, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+
+cowplot::plot_grid(vpd_RR, vpd_lag_RR)
+
+### visualize effects of rmax
+pred1_rmax <- crosspred(rmax_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$rmax, na.rm = TRUE), to = max(data_for_model$rmax, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+rmax_RR <- 
+  data.frame(rmax = pred1_rmax$predvar, 
+             mean = pred1_rmax$allRRfit,
+             lower = pred1_rmax$allRRlow,
+             upper = pred1_rmax$allRRhigh) %>% 
+  ggplot(aes(x = rmax, y = mean, ymin = lower, ymax = upper))+
+  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
+  xlab(expression(paste("rmax (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
+  annotation_logticks(sides = "b")  
+
+#if I want to include the rug, I need to remove the non-observation points first
+#rmax_RR <- rmax_RR + geom_rug(data = data_for_model, aes(x = rmax), sides = "t", alpha = 0.1, inherit.aes = FALSE)
+
+rmax_lag_RR <-
+  as.data.frame(exp(pred1_rmax$cumfit)) %>% mutate(rmax = pred1_rmax$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = rmax, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+
+cowplot::plot_grid(rmax_RR, rmax_lag_RR)
+
+### visualize effects of tmmx
+pred1_tmmx <- crosspred(tmmx_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$tmmx, na.rm = TRUE), to = max(data_for_model$tmmx, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+tmmx_RR <- 
+  data.frame(tmmx = pred1_tmmx$predvar, 
+             mean = pred1_tmmx$allRRfit,
+             lower = pred1_tmmx$allRRlow,
+             upper = pred1_tmmx$allRRhigh) %>% 
+  ggplot(aes(x = tmmx, y = mean, ymin = lower, ymax = upper))+
+  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
+  xlab(expression(paste("tmmx (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
+  annotation_logticks(sides = "b")  
+
+#if I want to include the rug, I need to remove the non-observation points first
+#tmmx_RR <- tmmx_RR + geom_rug(data = data_for_model, aes(x = tmmx), sides = "t", alpha = 0.1, inherit.aes = FALSE)
+
+tmmx_lag_RR <-
+  as.data.frame(exp(pred1_tmmx$cumfit)) %>% mutate(tmmx = pred1_tmmx$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = tmmx, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+
+cowplot::plot_grid(tmmx_RR, tmmx_lag_RR)
+
+### visualize effects of vs
+pred1_vs <- crosspred(vs_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$vs, na.rm = TRUE), to = max(data_for_model$vs, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+vs_RR <- 
+  data.frame(vs = pred1_vs$predvar, 
+             mean = pred1_vs$allRRfit,
+             lower = pred1_vs$allRRlow,
+             upper = pred1_vs$allRRhigh) %>% 
+  ggplot(aes(x = vs, y = mean, ymin = lower, ymax = upper))+
+  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
+  xlab(expression(paste("vs (x / x"^"3",")")))+ ylab('RR')+theme_bw() 
+
+#if I want to include the rug, I need to remove the non-observation points first
+#vs_RR <- vs_RR + geom_rug(data = data_for_model, aes(x = vs), sides = "t", alpha = 0.1, inherit.aes = FALSE)
+
+vs_lag_RR <-
+  as.data.frame(exp(pred1_vs$cumfit)) %>% mutate(vs = pred1_vs$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = vs, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+
+cowplot::plot_grid(vs_RR, vs_lag_RR)
+
+
+
+
+
+
+
+
+
+
+# # include the 1-day lagged residual in the model
+# #resid_model1 <- c(rep(NA, max_lag), residuals(model1, type = "deviance"))
+# resid_model1 <- c(rep(NA, 0), residuals(model1, type = "deviance"))#for the model version when pollen isn't included
+# model2 <- update(model1, .~. + tsModel::Lag(resid_model1, 1))  #length(resid_model1) #length(residuals(model1, type = "deviance"))
 
 # hist(model1$fitted.values, n = 100)
 # hist(model2$fitted.values, n = 200)
@@ -614,7 +799,6 @@ data_for_model %>%
 
 
 ### Fig 2,3,4: visualize effects of pollen ###############################################################
-#cup all  
 pred1_cup <- crosspred(cup_lag,  model2, #at = 1,
                        at = seq(from = 0, to = max(data_for_model$cup_all_lm), by = 0.10), 
                        bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
