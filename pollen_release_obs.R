@@ -436,9 +436,9 @@ model1 <- glm(pollen_lots ~  #number of cases at a station on an observed day
                 # tmmx_lag +
                 #ns(time_after_noon, df = 3) + 
                 #vpd + 
-                time_after_noon * vpd + 
+                time_after_sunrise * vpd + 
                 #rmax + 
-                time_after_noon * tmmx +
+                time_after_sunrise * tmmx +
                 #vpd*tmmx + 
                 srad_lag +  vs_lag, 
               

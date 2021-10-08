@@ -1753,7 +1753,7 @@ hist(results_params2$Mean)
 
 
 #simulation for each tree core
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 100, thin = 3) #variables to monitor
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 1000, thin = 3) #variables to monitor
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)
@@ -1775,6 +1775,21 @@ ggplot()  + theme_bw() +
   geom_jitter(data = p_core_sites, aes(x = day_experiment, y = prop_open), width = 2, color = "red") +
   facet_wrap(~site_n_core)
 
+### panel for example for paper
+results_param_fig <- results_params3 %>%  filter(site_n_core == 7) 
+p_core_sites_fig <- p_core_sites %>% filter(site_n_core == 7) %>% dplyr::select(day_experiment, date, tree_n_core, prop_open)
+p_core_site_results_param_fig <- left_join(results_param_fig, p_core_sites_fig) %>% 
+  mutate(date_sample = day_experiment + day_start)
+library(ggthemes)
+panel_a_core <- ggplot(p_core_site_results_param_fig)  + theme_few() +
+  geom_line(aes(x = date_sample, y = Mean, group = tree_n_core),color = "gray50") +
+  geom_point(aes(x = date, y = prop_open), color = "red") +
+  xlab("date") + ylab("opened cones (proportion)") + theme(legend.position = "none") +
+  scale_x_date(limits = c(mdy("12-15-2020"), mdy("01-25-2021")))+
+  geom_pointrange(y = 0.5, xmin = day_start + 16.853922, x = day_start + 20.53876, xmax = day_start + 24.19277, 
+                  col = rgb(152/255, 0/255, 197/255), lwd = 1.3) #based on mean of that site
+
+
 
 ## simulation for each tree snap
 mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim_snap"),  n.iter = 1000, thin = 3) #3000 iterations ran out of memory
@@ -1791,7 +1806,7 @@ results_params2$day_experiment <- as.numeric(gsub("]", "", day_n_vector, fixed =
 tree_n_vector <- purrr::map(strsplit(results_params2$parameter, split = ","), 1) 
 results_params2$tree_n_snap <- as.numeric(gsub("Y_hat_sim_snap[", "", tree_n_vector, fixed = TRUE) )
 results_params2 <- arrange(results_params2, tree_n_snap, day_experiment) 
-site_n_snap_join <- select(data_for_model_snap, tree_n_snap, site_n_snap) %>% distinct()
+site_n_snap_join <- dplyr::select(data_for_model_snap, tree_n_snap, site_n_snap) %>% distinct()
 results_params3 <- left_join(results_params2, site_n_snap_join) %>% 
   mutate(date3 = day_start + day_experiment)
 
@@ -1802,7 +1817,24 @@ ggplot()  + theme_bw() +
   # geom_line(data = results_params2, aes(x = day_experiment, y = X97.5., group = tree_n,color = tree_n), lty =2) +
   geom_jitter(data = data_for_model_snap, aes(x = date3, y = prop_open), width = 2, color = "red") +
   facet_wrap(~site_n_snap) + xlab("day of experiment") + ylab("cones open (proportion)") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+
+### panel for example for paper
+results_param_fig <- results_params3 %>%  filter(site_n_snap == 7) 
+p_snap_sites_fig <- p_snap_sites %>% filter(site_n_snap == 7) %>% dplyr::select(day_experiment, date, tree_n_snap, prop_open)
+p_snap_site_results_param_fig <- left_join(results_param_fig, p_snap_sites_fig) %>% 
+  mutate(date_sample = day_experiment + day_start)
+
+panel_b_snap <- ggplot(p_snap_site_results_param_fig)  + theme_few() +
+  geom_line(aes(x = date_sample, y = Mean, group = tree_n_snap),color = "gray50") +
+  geom_point(aes(x = date, y = prop_open), color = "red") +
+  xlab("date") + ylab("opened cones (proportion)") + theme(legend.position = "none") + ylab(NULL)+ 
+  scale_x_date(limits = c(mdy("12-15-2020"), mdy("01-25-2021")))+
+  geom_pointrange(y = 0.5, xmin = day_start + 23.9, x = day_start + 27.9, xmax = day_start + 31.8, 
+                  col = rgb(199/255, 0/255, 140/255), lwd = 1.3) #based on mean of that site
+
+cowplot::plot_grid(panel_a_core, panel_b_snap) #for Fig 2, panels B & C
 
 
 ### extract site means for each site: core

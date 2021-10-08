@@ -6,10 +6,12 @@ library(zoo)
 library(readr)
 library(dplyr)
 library(tidyr)
-library(climwin)
+#library(climwin)
 library(imputeTS)
 library(ggpmisc)
 library(raster)
+library(tmap)
+library(lubridate)
 #rm(list=ls())
 
 #load in site level-estimates: cones for field season 2021
@@ -462,10 +464,10 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 ### loop exploration through the other datasets ########################################
 #download script is Google Earth Engine in: TX_Ja_pheno
 env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
-
+pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv")
 
 for(i in 8:21){
-env_raw <- read_csv(env_data_list[i], na = "No data")
+env_raw <- read_csv(env_data_list[i], na = "No data") #i <- 8 #str(env_raw)
 focal_dataset_name <- gsub(x = dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/"),
                       "_download.csv", "")[i]
 
@@ -480,39 +482,52 @@ env <-
          long = round(as.numeric(long), 1),
          site = paste(long, lat)) %>% 
   rename(env = value) %>% 
-  mutate(env_date = lubridate::ymd_hms(name),
-         d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
-                        years == "20-21" ~ d + mdy("12-10-2020"))) %>% 
+  mutate(env_date = lubridate::ymd_hms(name)) %>% 
+         
   dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
-  dplyr::select(-c(name))
+  dplyr::select(-c(name, d, sd))
 
-env <- left_join(env, sms_resids)
-
-# #19-20 field season
-# env %>% 
-#   filter(years == "19-20") %>% 
-#   filter(env_date > ymd("19/01/20")) %>% 
-#   filter(env_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-#   ggplot(aes(x = env_date, y = env, group = site, color = resid)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
-#   scale_color_viridis_c(name = "peak date", trans = "date") +
-#   xlab("date") + ylab("vapor pressure deficit (kPa)")
+env <- left_join(env, pheno_site_mean_gompertz_1920_2021) %>% 
+        mutate( d2 = case_when(years == "19-20" ~ d + mdy("12-08-2019"),
+                               years == "20-21" ~ d + mdy("12-10-2020"))) 
+#length(unique(env$site_name))
 
 #20-21 field season
-env_summary_plot <-
+env_summary_plot_yr2 <-
   env %>% 
   filter(years == "20-21") %>% 
   filter(env_date > ymd("20/01/01")) %>% 
   filter(env_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-  ggplot(aes(x = env_date, y = env, group = site, color = sms_resid)) + geom_line(lwd = 1, alpha =0.5) + theme_bw()+
-  scale_color_viridis_c(name = "sms residual") +
+  ggplot(aes(x = env_date, y = env, group = site, color = d)) + geom_line(lwd = 1, alpha =0.5) + theme_bw()+
+  scale_color_viridis_c(name = "peak day") +
   xlab("date") + ylab(focal_dataset_name)
 
-ggsave(plot = env_summary_plot, 
+ggsave(plot = env_summary_plot_yr2, 
        filename = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
-                         focal_dataset_name, ".png"),
-       height = 12,
-       width = 18,
+                         focal_dataset_name, "yr2.png"),
+       height = 10,
+       width = 14,
        units = "in")
+
+#19-20 field season
+env_summary_plot_yr2 <-
+  env %>% 
+  filter(years == "19-20") %>% 
+  filter(env_date > ymd("19/01/01")) %>% 
+  filter(env_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  ggplot(aes(x = env_date, y = env, group = site, color = d)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+  scale_color_viridis_c(name = "peak day") +
+  xlab("date") + ylab(focal_dataset_name)
+
+ggsave(plot = env_summary_plot_yr2, 
+       filename = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
+                         focal_dataset_name, "yr1.png"),
+       height = 10,
+       width = 14,
+       units = "in")
+
+
+
 }
 
 
