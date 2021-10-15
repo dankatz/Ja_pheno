@@ -466,7 +466,7 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
 pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv")
 
-for(i in 8:21){
+for(i in 1:5){
 env_raw <- read_csv(env_data_list[i], na = "No data") #i <- 8 #str(env_raw)
 focal_dataset_name <- gsub(x = dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/"),
                       "_download.csv", "")[i]
@@ -526,8 +526,6 @@ ggsave(plot = env_summary_plot_yr2,
        width = 14,
        units = "in")
 
-
-
 }
 
 
@@ -549,8 +547,8 @@ formula <- y ~ x
 
 env %>% 
   filter(years == "20-21") %>% 
-  filter(env_date > ymd("20/07/01")) %>% 
-  filter(env_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+  filter(env_date > ymd("20/08/01")) %>% 
+  filter(env_date < ymd("20/08/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
   group_by(site, site_name, d, sms_resid) %>% 
   summarize(env_mean = mean(env))%>%  #-> test # #%T>% => test 
   ggplot(aes(x = env_mean, y = sms_resid, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
@@ -653,6 +651,219 @@ test <- lm(d ~ env_mean, data = env_summerfall20); summary(test)
 #         bestmodeldata = MassSingle$BestModelData)
 # 
 # plot(MassSingle$BestModelData)
+
+#modified function for extracting the info that is displayed in plotwin
+plotwin2 <- function(dataset, cw = 0.95){
+  #Order models by weight#
+  dataset    <- dataset[order(-dataset$ModWeight), ]
+  #Firstly, check if the top model has a weight > cw. If so, just use the top model.
+  if(dataset$ModWeight[1] > cw){
+    datasetcw <- dataset[1, ]
+    warning(paste0("Top window has a weight greater than ", cw, ". Plotting single best window only."))
+  } else {
+    dataset$cw <- as.numeric(cumsum(dataset$ModWeight) <= cw)
+    datasetcw  <- subset(dataset, cw == 1) 
+  }
+  keep=c("Closest", "WindowClose", "WindowOpen")
+  datasetcw                  <- datasetcw[keep]
+  datasetcw                  <- reshape::melt(datasetcw, id = "Closest")
+  datasetcw$variable         <- factor(datasetcw$variable, levels = c("WindowOpen", "WindowClose"))
+  levels(datasetcw$variable) <- c("Window Open", "Window Close")
+  p_meds <- data.frame(variable = levels(datasetcw$variable), value = as.numeric(tapply(datasetcw$value, datasetcw$variable, median)))
+  return(p_meds)
+}
+
+
+env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
+pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+  mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
+                                 years == "20-21" ~ d + mdy("12-10-2020")),
+         b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
+                                        years == "20-21" ~ "28/12/2020"))
+
+
+
+env_data_list2 <- stringr::str_subset(env_data_list, pattern = "GRIDMET|DAYMET|SMAP10KM")
+env_table <- data.frame(matrix(nrow = length(env_data_list2), ncol = 9))
+names(env_table) <- c("env_var", "window_open", "window_close", "window_open_jul", "window_close_jul", 
+                      "R2", "p", "MAE", "RMSE")
+
+for(i in 20:20){ #length(env_data_list2) #i <- 20 #str(env_raw)
+env_raw <- read_csv(env_data_list2[i], na = "No data") 
+focal_dataset_name <- gsub(x = env_data_list2[i],
+                           pattern = ("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/|_download.csv"),
+                           replacement = "")
+print(focal_dataset_name)
+
+env <- 
+  env_raw %>%  #names(vpd_raw) #str(vpd_raw)
+  pivot_longer(cols = contains("00:00")) %>% 
+  rename(site_coords = .geo) %>% 
+  mutate(site_coords = substr(site_coords, 32, 70),
+         site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+  separate(site_coords, sep = ",", c("lat", "long")) %>% 
+  mutate(lat = round(as.numeric(lat), 1), 
+         long = round(as.numeric(long), 1),
+         site = paste(long, lat)) %>% 
+  rename(env = value) %>% 
+  mutate(env_date = lubridate::ymd_hms(name)) %>% 
+  dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+  dplyr::select(-c(name, d, sd)) %>% 
+  mutate( env_c = env, #- 273.15,
+          env_date2 = format(env_date, "%d/%m/%Y")) #climwin needs this specific date format 
+
+#convert NAs to 0 for precip
+if(focal_dataset_name == "DAYMET_prcp_2018_2020" |
+   focal_dataset_name == "GRIDMET_pr_2018_2021" ){
+  env <- env %>% mutate(env_c = replace_na(env_c, 0)) #for precipitation
+}
+
+#convert temperature to C from K
+if(focal_dataset_name == "DAYMET_tmax_2018_2020" |
+   focal_dataset_name == "DAYMET_tmin_2018_2020" |
+   focal_dataset_name == "GRIDMET_tmmn_2018_2021"|
+   focal_dataset_name == "GRIDMET_tmmx_2018_2021"){
+  env <- env %>% mutate(env_c = env_c - 273.15) 
+}
+
+#interpolate any further missing data
+if(length(env$env_c[is.na(env$env_c)]) > 0){
+  print(paste0("there were ", length(env$env_c[is.na(env$env_c)]), " NA values interpolated"))
+  env$env_c <- imputeTS::na_interpolation(x = env$env_c, option = "linear") #doesn't work to do this within mutate
+}
+
+
+#convert the once every three day measurements to a daily time-step by interpolating sms
+if(focal_dataset_name == "SMAP10KM_ssm_2018_2020" | focal_dataset_name == "SMAP10KM_susm_2018_2020"){
+date_fill_join <- expand_grid(sms_date = seq(min(date(env$env_date)), max(date(env$env_date)), by = "1 day"),
+                              site_name = unique(env$site_name)) %>%
+                  mutate(env_date2 = format(sms_date, "%d/%m/%Y")) 
+
+env <- left_join(date_fill_join, env) %>% arrange(site_name, sms_date)
+
+sms_imputed <- imputeTS::na_interpolation(x = env$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+env <- env %>%
+      mutate(env_c = sms_imputed) %>%
+      fill(years, lat, long, site, .direction = "downup")
+}
+
+####
+MassWin <- slidingwin(xvar = list(Temp = env$env_c),
+                      cdate = env$env_date2,
+                      bdate = pheno_site_mean_gompertz_1920_2021$b_date_placeholder, 
+                      baseline = lm(d ~ 1, data = pheno_site_mean_gompertz_1920_2021),
+                      cinterval = "day",
+                      range = c(365, 0),
+                      type = "absolute",
+                      refday = c(28, 12), #dd mm of reference day
+                      stat = "mean",
+                      func = "lin",
+                      spatial = list(pheno_site_mean_gompertz_1920_2021$site_name, #biological dataset #unique(pheno_site_mean_gompertz_1920_2021$site_name)
+                                     env$site_name)) #climate dataset #unique(env$site_name)
+head(MassWin[[1]]$Dataset)
+MassWin[[1]]$BestModel
+MassOutput <- MassWin[[1]]$Dataset
+
+plotdelta(dataset = MassOutput)
+plotweights(dataset = MassOutput)
+#plotbetas(dataset = MassOutput)
+plotwin(dataset = MassOutput)
+
+#best fit model
+#plot(MassWin[[1]]$BestModelData$climate, MassWin[[1]]$BestModelData$yvar)
+#summary(lm(MassWin[[1]]$BestModelData$yvar ~ MassWin[[1]]$BestModelData$climate))
+
+plotwin_oc <- plotwin2(MassOutput) #plotwin_oc$value[1]
+
+
+# str(MassOutput)
+# (MassOutput$WindowOpen)
+# ?plotwin
+# test <- plotwin(dataset = MassOutput)
+# str(test)
+# median(test$data$value)
+# .05 * nrow(MassWin[[1]]$Dataset)
+# median(MassWin[[1]]$Dataset$WindowClose[1:1016])
+# ??plotwin
+# plotwin2(dataset = MassOutput)
+
+#manual double check I'm getting "best fit" when I do the regression myself
+# test_env <- env %>% filter(years == "20-21") %>% 
+#   group_by(site_name) %>% 
+#   filter(env_date2 == "22/12/2020") #start date of dec 28 - 6 days
+# test_env_d <- left_join(pheno_site_mean_gompertz_1920_2021, test_env)
+# plot(test_env_d$env_c, test_env_d$d) #yes, it works fine
+
+MassSingle <- singlewin(xvar = list(Temp = env$env_c),
+                        cdate = env$env_date2,
+                        bdate = pheno_site_mean_gompertz_1920_2021$b_date_placeholder, 
+                        baseline = lm(d ~ 1, data = pheno_site_mean_gompertz_1920_2021),
+                        cinterval = "day",
+                        range = c(plotwin_oc$value[1], plotwin_oc$value[2]),
+                        #range = c(176, 91),
+                        type = "absolute",
+                        refday = c(28, 12), #dd mm of reference day
+                        stat = "mean",
+                        func = "lin",
+                        spatial = list(pheno_site_mean_gompertz_1920_2021$site_name, #biological dataset #unique(pheno_site_mean_gompertz_1920_2021$site_name)
+                                       env$site_name))
+#summary(MassSingle$BestModel)
+medianoc_fit <- summary(lm( MassSingle$BestModelData$yvar ~ MassSingle$BestModelData$climate))
+
+medianoc_df <- data.frame(env = MassSingle$BestModelData$climate, yvar = MassSingle$BestModelData$yvar,
+                          site_name = pheno_site_mean_gompertz_1920_2021$site_name, years = pheno_site_mean_gompertz_1920_2021$years)
+
+fig_save <- ggplot(medianoc_df, aes(x = env, y = yvar)) + geom_point(aes(color = years)) + geom_smooth(method = "lm", se = F) + 
+  xlab(focal_dataset_name) + theme_bw() + ggtitle(paste0("R2=", round(medianoc_fit$r.squared, 3)))
+fig_save
+file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor/",
+                         focal_dataset_name,".jpg")
+ggsave(filename = file_name_save, plot = fig_save)
+
+#plot(MassSingle$BestModelData$climate, MassSingle$BestModelData$yvar) #yes, I am getting what I should from MassSingle
+# plotbest(dataset = MassOutput,
+#          bestmodel = MassSingle$BestModel,
+#          bestmodeldata = MassSingle$BestModelData)
+
+### save results in the output table
+env_table$env_var[i] <- focal_dataset_name
+env_table$window_open[i] <- as.character(mdy("12/28/2020") - plotwin_oc$value[1])
+env_table$window_close[i] <- as.character(mdy("12/28/2020") - plotwin_oc$value[2])
+env_table$window_open_jul[i] <- yday(mdy("12/28/2020") - plotwin_oc$value[1])
+env_table$window_close_jul[i] <- yday(mdy("12/28/2020") - plotwin_oc$value[2])
+env_table$R2[i] <- round(medianoc_fit$r.squared, 3)
+env_table$p[i] <- medianoc_fit$coefficients[8]
+env_table$MAE[i] <- round(mean(abs(medianoc_fit$residuals)), 3)
+env_table$RMSE[i] <- round(sqrt(mean(medianoc_fit$residuals^2)), 3)
+
+} #end env var table creation loop
+
+write.table(env_table, "clipboard", sep="\t", row.names=FALSE)
+# plotall(dataset = MassOutput,
+#         datasetrand = MassRand,
+#         bestmodel = MassSingle$BestModel,
+#         bestmodeldata = MassSingle$BestModelData)
+# 
+# plot(MassSingle$BestModelData)
+
+MassRand <- randwin(  repeats = 5,
+                      xvar = list(Temp = env$env_c),
+                      cdate = env$env_date2,
+                      bdate = pheno_site_mean_gompertz_1920_2021$b_date_placeholder, 
+                      baseline = lm(d ~ 1, data = pheno_site_mean_gompertz_1920_2021),
+                      cinterval = "day",
+                      range = c(360, 1),
+                      type = "absolute",
+                      refday = c(31, 12), #dd mm of reference day
+                      stat = "mean",
+                      func = "lin",
+                      spatial = list(pheno_site_mean_gompertz_1920_2021$site_name, #biological dataset #unique(pheno_site_mean_gompertz_1920_2021$site_name)
+                                     env$site_name)) #climate dataset #unique(env$site_name)
+MassRand[[1]]
+pvalue(dataset = MassWin[[1]]$Dataset, datasetrand = MassRand[[1]], metric = "C",
+       sample.size = 55) #using the number of different sites x years as n
+
+plothist(dataset = MassOutput, datasetrand = MassRand[[1]]) #hist(MassRand[[1]])
 
 
 
