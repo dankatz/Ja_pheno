@@ -1,17 +1,18 @@
 #script for analyzing site-level phenology as a function of environmental data
-library(daymetr)
-library(sf)
-library(magrittr)
-library(zoo)
+#library(daymetr)
+
 library(readr)
+library(lubridate)
 library(dplyr)
 library(tidyr)
-#library(climwin)
+library(climwin)
 library(imputeTS)
 library(ggpmisc)
 library(raster)
+library(sf)
 library(tmap)
-library(lubridate)
+library(magrittr)
+library(zoo)
 #rm(list=ls())
 
 
@@ -110,14 +111,14 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv")
 
 
-# ### SMAP: loading in surface soil moisture (sms) ########################################
+# ### SMAP: loading in surface soil moisture (ssm) ########################################
 # #SMAP download script is Google Earth Engine in: TX_Ja_pheno
 # 
-# sms_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
+# ssm_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
 #                     na = "No data")
 # 
-# sms <- 
-#   sms_raw %>%  #names(sms_raw) #str(sms_raw)
+# ssm <- 
+#   ssm_raw %>%  #names(ssm_raw) #str(ssm_raw)
 #   pivot_longer(cols = contains("00:00")) %>% 
 #   rename(site_coords = .geo) %>% 
 #   mutate(site_coords = substr(site_coords, 32, 71),
@@ -126,8 +127,8 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   mutate(lat = round(as.numeric(lat), 1), 
 #          long = round(as.numeric(long), 1),
 #          site = paste(long, lat)) %>% 
-#   rename(sms = value) %>% 
-#   mutate(sms_date = lubridate::ymd_hms(name),
+#   rename(ssm = value) %>% 
+#   mutate(ssm_date = lubridate::ymd_hms(name),
 #          d2 = case_when(years == "19-20" ~ d + day_start_1920,
 #                         years == "20-21" ~ d + day_start_2021)) %>% 
 #   dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
@@ -135,70 +136,70 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # 
 # 
 # #19-20 field season
-# sms %>% 
+# ssm %>% 
 #   filter(years == "19-20") %>% 
-#   filter(sms_date > ymd("19/01/20")) %>% 
-#   filter(sms_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-#   ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+#   filter(ssm_date > ymd("19/01/20")) %>% 
+#   filter(ssm_date < ymd("19/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   ggplot(aes(x = ssm_date, y = ssm, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
 #   scale_color_viridis_c(name = "peak date", trans = "date") +
 #   xlab("date") + ylab("surface soil moisture (mm)")
 # 
 # 
 # #20-21 field season
-# sms %>% 
+# ssm %>% 
 #   filter(years == "20-21") %>% 
-#   filter(sms_date > ymd("20/01/01")) %>% 
-#   filter(sms_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-#   ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+#   filter(ssm_date > ymd("20/01/01")) %>% 
+#   filter(ssm_date < ymd("20/12/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   ggplot(aes(x = ssm_date, y = ssm, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
 #   scale_color_viridis_c(name = "peak date", trans = "date") +
 #   xlab("date") + ylab("surface soil moisture (mm)")
 # 
-# #summary(sms$sms)
+# #summary(ssm$ssm)
 # 
 # formula <- y ~ x 
 # #formula <- y ~ x + I(x^2)
 # 
-# sms %>% 
+# ssm %>% 
 #   filter(years == "19-20") %>% 
-#   filter(sms_date > ymd("19/04/1")) %>% 
-#   filter(sms_date < ymd("19/06/1")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   filter(ssm_date > ymd("19/04/1")) %>% 
+#   filter(ssm_date < ymd("19/06/1")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
 #   group_by(site, site_name, d, d2) %>% 
-#   summarize(sms_mean = mean(sms)) %>%  #-> test2 #%>% #%T>% => test 
-#   ggplot(aes(x = sms_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+#   summarize(ssm_mean = mean(ssm)) %>%  #-> test2 #%>% #%T>% => test 
+#   ggplot(aes(x = ssm_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
 #   geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
 #   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
 #                formula = formula, parse = TRUE, label.x = .9) +
 #   theme_bw() + xlab("surface soil moisture (mm)") + ylab("50% pollen released (day)") 
 # 
-# sms %>% 
+# ssm %>% 
 #   filter(years == "20-21") %>% 
-#   filter(sms_date > ymd("20/04/01")) %>% 
-#   filter(sms_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   filter(ssm_date > ymd("20/04/01")) %>% 
+#   filter(ssm_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
 #   group_by(site, site_name, d, d2) %>% 
-#   summarize(sms_mean = mean(sms))%>%  #-> test # #%T>% => test 
-#   ggplot(aes(x = sms_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+#   summarize(ssm_mean = mean(ssm))%>%  #-> test # #%T>% => test 
+#   ggplot(aes(x = ssm_mean, y = d2, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
 #   geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
 #   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
 #                formula = formula, parse = TRUE, label.x = .9) +
 #   theme_bw() + xlab("surface soil moisture (mm)") + ylab("50% pollen released (day)")
 # 
 # smap_spring19 <- 
-#   sms %>% 
-#   filter(sms_date > ymd("19/04/01")) %>% 
-#   filter(sms_date < ymd("19/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   ssm %>% 
+#   filter(ssm_date > ymd("19/04/01")) %>% 
+#   filter(ssm_date < ymd("19/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
 #   group_by(site, site_name, d, d2) %>% 
-#   summarize(sms_mean = mean(sms))
+#   summarize(ssm_mean = mean(ssm))
 # 
 # smap_spring20 <- 
-#   sms %>% 
+#   ssm %>% 
 #   filter(years == "20-21") %>% 
-#   filter(sms_date > ymd("20/04/01")) %>% 
-#   filter(sms_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   filter(ssm_date > ymd("20/04/01")) %>% 
+#   filter(ssm_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
 #   group_by(site, site_name, d, d2) %>% 
-#   summarize(sms_mean = mean(sms)) 
+#   summarize(ssm_mean = mean(ssm)) 
 #   
 # 
-# #plotting raw sms rasters
+# #plotting raw ssm rasters
 # ssm_2019_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2021_spring.tif")
 # tm_shape(ssm_2019_spring) + 
 #   tm_raster(title = "spring soil moisture",  
@@ -323,31 +324,31 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # 
 # 
 # yr2_env <- left_join(smap_spring20, vpd_summerfall20)
-# ggplot(yr2_env, aes(x = sms_mean, y = vpd_mean)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
-# ggplot(yr2_env, aes(x = sms_mean, y = d)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
-# fit_sms_spring2020 <- lm(d ~ sms_mean, data = yr2_env)
-# summary(fit_sms_spring2020)
-# str(fit_sms_spring2020)
+# ggplot(yr2_env, aes(x = ssm_mean, y = vpd_mean)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
+# ggplot(yr2_env, aes(x = ssm_mean, y = d)) + geom_point() + theme_bw() + geom_smooth(method ="lm")
+# fit_ssm_spring2020 <- lm(d ~ ssm_mean, data = yr2_env)
+# summary(fit_ssm_spring2020)
+# str(fit_ssm_spring2020)
 # 
-# sms_resids <- yr2_env %>% 
-#   dplyr::select(site, site_name, lat, long, d, d2, sms_mean, vpd_mean) %>% 
+# ssm_resids <- yr2_env %>% 
+#   dplyr::select(site, site_name, lat, long, d, d2, ssm_mean, vpd_mean) %>% 
 #   ungroup() %>% 
-#   mutate(sms_resid = as.vector(fit_sms_spring2020$residuals),
+#   mutate(ssm_resid = as.vector(fit_ssm_spring2020$residuals),
 #          years = "20-21")
 # 
 # ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
-#   geom_point(data = sms_resids, aes(x = long, y = lat, color = sms_resid), size = 2, alpha = 0.8) + theme_bw() +
+#   geom_point(data = ssm_resids, aes(x = long, y = lat, color = ssm_resid), size = 2, alpha = 0.8) + theme_bw() +
 #   scale_color_gradient2(low = "red", mid = "gray", high = "blue", name = "residuals") 
 #   #scale_color_viridis_c(option = "magma", direction = -1)
 # 
 # 
-# sms_resids %>% 
-#   ggplot(aes(x = long, y = sms_resid)) + geom_point() + theme_bw() + geom_smooth(method = "lm") +
+# ssm_resids %>% 
+#   ggplot(aes(x = long, y = ssm_resid)) + geom_point() + theme_bw() + geom_smooth(method = "lm") +
 #   scale_color_gradient2()#scale_color_viridis_c() 
 # 
 # 
-# sms_resids %>% 
-#   ggplot(aes(x = sms_mean, y = d, color = sms_resid)) + geom_point() + theme_bw() + geom_smooth(method = "lm") +
+# ssm_resids %>% 
+#   ggplot(aes(x = ssm_mean, y = d, color = ssm_resid)) + geom_point() + theme_bw() + geom_smooth(method = "lm") +
 #   scale_color_gradient2()#scale_color_viridis_c() 
 # 
 # 
@@ -355,31 +356,31 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # day_start_1920
 # day_start_2021
 # 
-# # SMS from SMAP
+# # ssm from SMAP
 # #19-20 field season
-# sms_1920 <- sms %>% 
+# ssm_1920 <- ssm %>% 
 #   filter(years == "19-20") %>% 
-#   filter(sms_date > ymd("19/04/01")) %>% 
-#   filter(sms_date < ymd("19/06/01")) %>% 
-#   # ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+#   filter(ssm_date > ymd("19/04/01")) %>% 
+#   filter(ssm_date < ymd("19/06/01")) %>% 
+#   # ggplot(aes(x = ssm_date, y = ssm, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
 #   # scale_color_viridis_c(name = "peak date", trans = "date") +
 #   # xlab("date") + ylab("surface soil moisture (mm)")
 #   group_by(site_name, long, lat) %>% 
-#   summarize(sms_mean = mean(sms),
+#   summarize(ssm_mean = mean(ssm),
 #             d = mean(d), #accounting for different start dates
 #             sd = mean(sd),
 #             d2 = mean(d2)) %>% 
 #   ungroup()
 # 
-# fit_sms_spring2020
-# fit_sms_spring2020_on_1920data <- data.frame(predict.lm(fit_sms_spring2020, newdata = sms_1920, 
+# fit_ssm_spring2020
+# fit_ssm_spring2020_on_1920data <- data.frame(predict.lm(fit_ssm_spring2020, newdata = ssm_1920, 
 #                                                         interval = "prediction", level = 0.68)) #0.68/34 ~ 1 sd on standard normal 
-# sms_1920 <- sms_1920 %>% 
-#   mutate(d1920_pred2021_mean = fit_sms_spring2020_on_1920data$fit, #= sms_mean * fit_sms_spring2020$coefficients[2] + fit_sms_spring2020$coefficients[1])
-#          d1920_pred2021_lwr25 = fit_sms_spring2020_on_1920data$lwr,
-#          d1920_pred2021_upr75 = fit_sms_spring2020_on_1920data$upr)
+# ssm_1920 <- ssm_1920 %>% 
+#   mutate(d1920_pred2021_mean = fit_ssm_spring2020_on_1920data$fit, #= ssm_mean * fit_ssm_spring2020$coefficients[2] + fit_ssm_spring2020$coefficients[1])
+#          d1920_pred2021_lwr25 = fit_ssm_spring2020_on_1920data$lwr,
+#          d1920_pred2021_upr75 = fit_ssm_spring2020_on_1920data$upr)
 # 
-# ggplot(sms_1920, aes(y = d + day_start_1920, ymin = d - sd + day_start_1920, ymax = d + sd + day_start_1920, label = site_name, #color = sms_mean,
+# ggplot(ssm_1920, aes(y = d + day_start_1920, ymin = d - sd + day_start_1920, ymax = d + sd + day_start_1920, label = site_name, #color = ssm_mean,
 #                      x = d1920_pred2021_mean + day_start_1920 , xmin = d1920_pred2021_lwr25 + day_start_1920, 
 #                      xmax = d1920_pred2021_upr75 + day_start_1920)) + 
 #   geom_pointrange() + geom_errorbarh() + theme_bw() + geom_smooth(method = "lm") +
@@ -389,16 +390,16 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   ylab("observed midpoint (site mean based on cone model)")
 #   #geom_label()
 # 
-# summary(lm(d ~  d1920_pred2021_mean , data = sms_1920))
+# summary(lm(d ~  d1920_pred2021_mean , data = ssm_1920))
 # 
 # #map of residuals
-# ggplot(sms_1920, aes(x = long, y = lat, color = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920)))) + 
+# ggplot(ssm_1920, aes(x = long, y = lat, color = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920)))) + 
 #   geom_point(size = 4) + theme_bw() + scale_color_viridis_c(name = "days underpredicted")
 # 
 # ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
 #   geom_jitter(aes(x = long, y = lat, 
 #                   col = as.numeric((d + day_start_1920) - (d1920_pred2021_mean + day_start_1920))),# size = pollen),#col = hilo2), pollen / max_p
-#               data = sms_1920, alpha = .7, size = 3)  + 
+#               data = ssm_1920, alpha = .7, size = 3)  + 
 #   scale_color_viridis_c(name = "days underpredicted") +
 #   xlab("") + ylab("") + #theme_few() + 
 #   theme(panel.grid.major = element_blank(), 
@@ -552,13 +553,13 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   filter(years == "20-21") %>% 
 #   filter(env_date > ymd("20/08/01")) %>% 
 #   filter(env_date < ymd("20/08/31")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-#   group_by(site, site_name, d, sms_resid) %>% 
+#   group_by(site, site_name, d, ssm_resid) %>% 
 #   summarize(env_mean = mean(env))%>%  #-> test # #%T>% => test 
-#   ggplot(aes(x = env_mean, y = sms_resid, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+#   ggplot(aes(x = env_mean, y = ssm_resid, label = site_name)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
 #   geom_smooth(method = "lm", formula = formula, se = FALSE) + #geom_label() + 
 #   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
 #                formula = formula, parse = TRUE, label.x = .9) +
-#   theme_bw() + xlab("environmental variable") + ylab("residual of sms: 50% pollen released (day)") 
+#   theme_bw() + xlab("environmental variable") + ylab("residual of ssm: 50% pollen released (day)") 
 # 
 # env_summerfall19 <- 
 #   env %>% 
@@ -660,17 +661,17 @@ if(length(env$env_c[is.na(env$env_c)]) > 0){
 }
 
 
-#convert the once every three day measurements to a daily time-step by interpolating sms
+#convert the once every three day measurements to a daily time-step by interpolating ssm
 if(focal_dataset_name == "SMAP10KM_ssm_2018_2020" | focal_dataset_name == "SMAP10KM_susm_2018_2020"){
-date_fill_join <- expand_grid(sms_date = seq(min(date(env$env_date)), max(date(env$env_date)), by = "1 day"),
+date_fill_join <- expand_grid(ssm_date = seq(min(date(env$env_date)), max(date(env$env_date)), by = "1 day"),
                               site_name = unique(env$site_name)) %>%
-                  mutate(env_date2 = format(sms_date, "%d/%m/%Y")) 
+                  mutate(env_date2 = format(ssm_date, "%d/%m/%Y")) 
 
-env <- left_join(date_fill_join, env) %>% arrange(site_name, sms_date)
+env <- left_join(date_fill_join, env) %>% arrange(site_name, ssm_date)
 
-sms_imputed <- imputeTS::na_interpolation(x = env$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+ssm_imputed <- imputeTS::na_interpolation(x = env$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
 env <- env %>%
-      mutate(env_c = sms_imputed) %>%
+      mutate(env_c = ssm_imputed) %>%
       fill(years, lat, long, site, .direction = "downup")
 }
 
@@ -879,17 +880,17 @@ for(i in 1:21){ #length(env_data_list2) #i <- 20 #str(env_raw)
   }
   
   
-  #convert the once every three day measurements to a daily time-step by interpolating sms
+  #convert the once every three day measurements to a daily time-step by interpolating ssm
   if(focal_dataset_name == "SMAP10KM_ssm_2018_2020" | focal_dataset_name == "SMAP10KM_susm_2018_2020"){
-    date_fill_join <- expand_grid(sms_date = seq(min(date(env$env_date)), max(date(env$env_date)), by = "1 day"),
+    date_fill_join <- expand_grid(ssm_date = seq(min(date(env$env_date)), max(date(env$env_date)), by = "1 day"),
                                   site_name = unique(env$site_name)) %>%
-      mutate(env_date2 = format(sms_date, "%d/%m/%Y")) 
+      mutate(env_date2 = format(ssm_date, "%d/%m/%Y")) 
     
-    env <- left_join(date_fill_join, env) %>% arrange(site_name, sms_date)
+    env <- left_join(date_fill_join, env) %>% arrange(site_name, ssm_date)
     
-    sms_imputed <- imputeTS::na_interpolation(x = env$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+    ssm_imputed <- imputeTS::na_interpolation(x = env$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
     env <- env %>%
-      mutate(env_c = sms_imputed) %>%
+      mutate(env_c = ssm_imputed) %>%
       fill(years, lat, long, site, .direction = "downup")
   }
   
@@ -946,7 +947,7 @@ for(i in 1:21){ #length(env_data_list2) #i <- 20 #str(env_raw)
                    ", extra var p = ", round(site_mean_env_mo_fit_sum$coefficients[11], 3)))
   
   fig_save
-  file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/with_sms/",
+  file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/with_ssm/",
                            focal_dataset_name,".jpg")
   ggsave(filename = file_name_save, plot = fig_save)
 
@@ -997,17 +998,17 @@ env_ssm <-
     dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
     dplyr::select(-c(name, d, sd)) %>% 
     mutate( env_c = env,
-            sms_date = date(env_date)) #climwin needs this specific date format 
+            ssm_date = date(env_date)) #climwin needs this specific date format 
 
-  #convert the once every three day measurements to a daily time-step by interpolating sms
-    date_fill_join <- expand_grid(sms_date = seq(min(date(env_ssm$env_date)), max(date(env_ssm$env_date)), by = "1 day"),
+  #convert the once every three day measurements to a daily time-step by interpolating ssm
+    date_fill_join <- expand_grid(ssm_date = seq(min(date(env_ssm$env_date)), max(date(env_ssm$env_date)), by = "1 day"),
                                   site_name = unique(env_ssm$site_name)) 
   
-   env_ssm <- left_join(date_fill_join, env_ssm) %>% arrange(site_name, sms_date)
+   env_ssm <- left_join(date_fill_join, env_ssm) %>% arrange(site_name, ssm_date)
     
-    sms_imputed <- imputeTS::na_interpolation(x = env_ssm$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+    ssm_imputed <- imputeTS::na_interpolation(x = env_ssm$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
     env_ssm <- env_ssm %>%
-      mutate(env_c = sms_imputed) %>%
+      mutate(env_c = ssm_imputed) %>%
       fill(years, lat, long, site, .direction = "downup")
 
     env_month_ssm <- env_ssm %>% mutate(months = month(env_date),
@@ -1048,7 +1049,166 @@ env_ssm <-
   #        plot = fig_save, width = 7, height = 6, units ="in")
 
   
-### empirical function for pollen release as a function of sms in April ##############
+### the best gridMET variable: SRAD in Jan - April ########################################
+  
+  #load in pheno data
+  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+    mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
+                                   years == "20-21" ~ d + mdy("12-10-2020")),
+           b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
+                                          years == "20-21" ~ "28/12/2020"))
+  
+  #load in environmental data: SSM from April 
+  srad_plots <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_srad_2018_2021_download.csv",
+                        na = "No data")
+  
+  env_srad <- 
+    srad_plots %>%  #names(vpd_raw) #str(vpd_raw)
+    pivot_longer(cols = contains("00:00")) %>% 
+    rename(site_coords = .geo) %>% 
+    mutate(site_coords = substr(site_coords, 32, 70),
+           site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+    separate(site_coords, sep = ",", c("lat", "long")) %>% 
+    mutate(lat = round(as.numeric(lat), 1), 
+           long = round(as.numeric(long), 1),
+           site = paste(long, lat)) %>% 
+    rename(env = value) %>% 
+    mutate(env_date = lubridate::ymd_hms(name)) %>% 
+    dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+    dplyr::select(-c(name, d, sd)) %>% 
+    mutate( env_c = env,
+            srad_date = date(env_date)) #climwin needs this specific date format 
+  
+  #convert the once every three day measurements to a daily time-step by interpolating srad
+  date_fill_join <- expand_grid(srad_date = seq(min(date(env_srad$env_date)), max(date(env_srad$env_date)), by = "1 day"),
+                                site_name = unique(env_srad$site_name)) 
+  
+  env_srad <- left_join(date_fill_join, env_srad) %>% arrange(site_name, srad_date) #summary(env_srad)
+  
+  srad_imputed <- imputeTS::na_interpolation(x = env_srad$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+  env_srad <- env_srad %>%
+    mutate(env_c = srad_imputed) %>%
+    fill(years, lat, long, site, .direction = "downup")
+  
+  env_month_srad <- env_srad %>% mutate(months = month(env_date),
+                                      years = year(env_date)) %>%
+    group_by(site_name, years, months)%>%
+    summarize(env_month = mean(env_c))
+  
+  env_month_join_srad <- env_month_srad %>% 
+    filter(months < 5 ) %>%
+    group_by(site_name, years)%>%
+    summarize(env_mo_mean = mean(env_month))%>%
+    mutate(years = case_when(years == "2019" ~ "19-20",
+                             years == "2020" ~ "20-21"))
+  
+  site_mean_srad_jan_apr <- left_join(pheno_site_mean_gompertz_1920_2021, env_month_join_srad) %>%
+    mutate(b_date_peak_noyr = case_when(years == "19-20" ~ b_date_peak + 366,
+                                        years == "20-21" ~ b_date_peak)) #set everything to be in the same year
+  
+  site_mean_srad_jan_apr_fit <- lm(d ~ env_mo_mean, data = site_mean_srad_jan_apr)
+  site_mean_srad_jan_apr_fit_sum <- summary(site_mean_srad_jan_apr_fit)
+  site_mean_srad_jan_apr_fit_sum
+  site_mean_srad_jan_apr <- site_mean_srad_jan_apr %>% mutate(d_srad = site_mean_srad_jan_apr_fit$fitted.values,
+                                                    d_resid = site_mean_srad_jan_apr_fit$residuals)  
+  
+  ggplot(site_mean_srad_jan_apr, aes(x= d_srad, y = d, color = d_srad)) + geom_point()
+  
+  ### figure for manuscript: srad vs peak date
+  fig_save <- ggplot(site_mean_srad_jan_apr, aes(x = env_mo_mean, y = b_date_peak_noyr)) + 
+    #geom_abline(intercept = site_mean_env_mo_fit_sum$coefficients[1], slope = site_mean_env_mo_fit_sum$coefficients[2]) +
+    geom_smooth(method = "lm", se = FALSE, color="black") +
+    geom_point(aes(color = years)) +
+    scale_y_date()+ ylab("season midpoint (day)") +
+    xlab("solar radiation (W/m2)") + ggthemes::theme_few() + 
+    annotate("text", x=167, y= mdy("1-23-2021"), label= "r^2 == 0.59", parse=TRUE) +
+    annotate("text", x=167, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
+  print(fig_save)
+  # ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_srad_vs_peak.jpg", 
+  #        plot = fig_save, width = 7, height = 6, units ="in")
+  
+  
+### the most reasonable gridMET variable: precip in Jan - Dec ########################################
+  
+  #load in pheno data
+  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+    mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
+                                   years == "20-21" ~ d + mdy("12-10-2020")),
+           b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
+                                          years == "20-21" ~ "28/12/2020"))
+  
+  #load in environmental data
+  prcp_plots <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_pr_2018_2021_download.csv",
+                         na = "No data")
+  
+  env_prcp <- 
+    prcp_plots %>%  #names(vpd_raw) #str(vpd_raw)
+    pivot_longer(cols = contains("00:00")) %>% 
+    rename(site_coords = .geo) %>% 
+    mutate(site_coords = substr(site_coords, 32, 70),
+           site_coords = gsub(pattern = "]}", replacement = "", x = site_coords)) %>% 
+    separate(site_coords, sep = ",", c("lat", "long")) %>% 
+    mutate(lat = round(as.numeric(lat), 1), 
+           long = round(as.numeric(long), 1),
+           site = paste(long, lat)) %>% 
+    rename(env = value) %>% 
+    mutate(env_date = lubridate::ymd_hms(name)) %>% 
+    dplyr::select(-1) %>%  #getting rid of the bad name that contained a ":"
+    dplyr::select(-c(name, d, sd)) %>% 
+    mutate( env_c = env,
+            env_c = replace_na(env_c, 0), #the NAs are actually zeros
+            prcp_date = date(env_date)) #climwin needs this specific date format 
+  
+  #convert the once every three day measurements to a daily time-step by interpolating prcp
+  date_fill_join <- expand_grid(prcp_date = seq(min(date(env_prcp$env_date)), max(date(env_prcp$env_date)), by = "1 day"),
+                                site_name = unique(env_prcp$site_name)) 
+  
+  env_prcp <- left_join(date_fill_join, env_prcp) %>% arrange(site_name, prcp_date) #summary(env_prcp)
+  
+  #prcp_imputed <- imputeTS::na_interpolation(x = env_prcp$env_c, option = "linear", maxgap = 3) #doesn't work to do this within mutate
+  env_prcp <- env_prcp %>%
+    #mutate(env_c = prcp_imputed) %>%
+    fill(years, lat, long, site, .direction = "downup")
+  
+  env_month_prcp <- env_prcp %>% mutate(months = month(env_date),
+                                        years = year(env_date)) %>%
+    group_by(site_name, years, months)%>%
+    summarize(env_month = mean(env_c))
+  
+  env_month_join_prcp <- env_month_prcp %>% 
+    #filter(months < 5 ) %>%
+    group_by(site_name, years)%>%
+    summarize(env_mo_mean = mean(env_month))%>%
+    mutate(years = case_when(years == "2019" ~ "19-20",
+                             years == "2020" ~ "20-21"))
+  
+  site_mean_prcp_jan_dec <- left_join(pheno_site_mean_gompertz_1920_2021, env_month_join_prcp) %>%
+    mutate(b_date_peak_noyr = case_when(years == "19-20" ~ b_date_peak + 366,
+                                        years == "20-21" ~ b_date_peak)) #set everything to be in the same year
+  
+  site_mean_prcp_jan_dec_fit <- lm(d ~ env_mo_mean, data = site_mean_prcp_jan_dec)
+  site_mean_prcp_jan_dec_fit_sum <- summary(site_mean_prcp_jan_dec_fit)
+  site_mean_prcp_jan_dec_fit_sum
+  site_mean_prcp_jan_dec <- site_mean_prcp_jan_dec %>% mutate(d_prcp = site_mean_prcp_jan_dec_fit$fitted.values,
+                                                              d_resid = site_mean_prcp_jan_dec_fit$residuals)  
+  
+  ggplot(site_mean_prcp_jan_dec, aes(x= d_prcp, y = d, color = d_prcp)) + geom_point()
+  
+  ### figure for manuscript: prcp vs peak date
+  fig_save <- ggplot(site_mean_prcp_jan_dec, aes(x = env_mo_mean, y = b_date_peak_noyr)) + 
+    #geom_abline(intercept = site_mean_env_mo_fit_sum$coefficients[1], slope = site_mean_env_mo_fit_sum$coefficients[2]) +
+    geom_smooth(method = "lm", se = FALSE, color="black") +
+    geom_point(aes(color = years)) +
+    scale_y_date()+ ylab("season midpoint (day)") +
+    xlab("precipitation (mm/day)") + ggthemes::theme_few() + 
+    annotate("text", x=3, y= mdy("1-23-2021"), label= "r^2 == 0.53", parse=TRUE) +
+    annotate("text", x=3, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
+  print(fig_save)
+  # ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_prcp_vs_peak.jpg", 
+  #        plot = fig_save, width = 7, height = 6, units ="in")
+  
+  
+### empirical function for pollen release as a function of ssm in April ##############
   site_mean_ssm_apr #need to run the previous section first
   #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
   p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
@@ -1100,18 +1260,124 @@ env_ssm <-
   #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv")
   
   
+### empirical function for pollen release as a function of srad in Jan - April ##############
+  site_mean_srad_jan_apr #need to run the previous section first
+  #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+  p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+  
+  site_mean_srad_jan_apr_join <- site_mean_srad_jan_apr %>% dplyr::select(site_name, site_mean_d = d_srad)
+  
+  #### NEED TO CHECK that site names line up so data isn't lost in the join
+  
+  p_2021 <- left_join(p_2021_raw, site_mean_srad_jan_apr_join) %>% 
+    mutate(site_mean_srad_pred = site_mean_d + mdy("12-10-2020"),
+           site_mean_dif = round(as.numeric(sample_date - site_mean_srad_pred), 0),
+           bag_cones_opening = case_when(is.na(bag_cones_opening) & bag_mean == 0 ~ 0,
+                                         TRUE ~ bag_cones_opening),
+           pol_release = case_when(pollen_rel == "none" ~ 0, 
+                                   pollen_rel == "little" ~ 0, 
+                                   pollen_rel == "some" ~ 1, 
+                                   pollen_rel == "lots" ~ 1)) #unique(p_2021$pollen_rel)
+  
+  ggplot(p_2021, aes(x = site_mean_dif, y = bag_cones_opening)) + geom_jitter() + theme_bw() +
+    geom_smooth()
+  
+  cones_d_empir <- p_2021 %>% 
+    group_by(site_mean_dif) %>% 
+    summarize(bag_cones_opening_mean = mean(bag_cones_opening, na.rm = TRUE),
+              pol_release_mean = mean(pol_release, na.rm = TRUE))
+  site_mean_dif_df <- data.frame(site_mean_dif = -100:100)
+  cones_d_empir <- left_join(site_mean_dif_df, cones_d_empir) %>% 
+    mutate(bag_cones_opening_mean = case_when(site_mean_dif > 34 ~ 0,
+                                              site_mean_dif < -18 ~ 0,
+                                              TRUE ~ bag_cones_opening_mean),
+           pol_release_mean = case_when(site_mean_dif > 34 ~ 0,
+                                        site_mean_dif < -18 ~ 0,
+                                        TRUE ~ pol_release_mean)) %>% 
+    mutate(bag_cones_opening_mean_m = zoo::rollapply(bag_cones_opening_mean, 7, #one week moving average
+                                                     mean, na.rm = TRUE, partial = TRUE, align='center'),
+           pol_release_mean_m = zoo::rollapply(pol_release_mean, 7, 
+                                               mean, na.rm = TRUE, partial = TRUE, align='center'))
+  
+  ggplot(cones_d_empir, aes(x = site_mean_dif, y = bag_cones_opening_mean)) + geom_point()+
+    geom_line(aes(x = site_mean_dif, y = bag_cones_opening_mean_m)) + theme_bw() + 
+    xlab( "difference from modeled site mean (days)") + ylab("opening sacs (proportion of observations)") +
+    coord_cartesian(xlim = c(-25, 40) )
+  
+  ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point()+
+    geom_line(aes(x = site_mean_dif, y = pol_release_mean_m)) + theme_bw() + 
+    xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
+    coord_cartesian(xlim = c(-25, 40) )
+  
+  #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
+  
   
   
 
 
-### create an empirical model/animation of opening sacs in fs 2020/2021 #######################################
+### empirical function for pollen release as a function of prcp in Jan - Dec ##############
+  site_mean_prcp_jan_dec #need to run the previous section first
+  #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+  p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+  
+  site_mean_prcp_jan_dec_join <- site_mean_prcp_jan_dec %>% dplyr::select(site_name, site_mean_d = d_prcp)
+  
+  #### NEED TO CHECK that site names line up so data isn't lost in the join
+  
+  p_2021 <- left_join(p_2021_raw, site_mean_prcp_jan_dec_join) %>% 
+    mutate(site_mean_prcp_pred = site_mean_d + mdy("12-10-2020"),
+           site_mean_dif = round(as.numeric(sample_date - site_mean_prcp_pred), 0),
+           bag_cones_opening = case_when(is.na(bag_cones_opening) & bag_mean == 0 ~ 0,
+                                         TRUE ~ bag_cones_opening),
+           pol_release = case_when(pollen_rel == "none" ~ 0, 
+                                   pollen_rel == "little" ~ 0, 
+                                   pollen_rel == "some" ~ 1, 
+                                   pollen_rel == "lots" ~ 1)) #unique(p_2021$pollen_rel)
+  
+  ggplot(p_2021, aes(x = site_mean_dif, y = bag_cones_opening)) + geom_jitter() + theme_bw() +
+    geom_smooth()
+  
+  cones_d_empir <- p_2021 %>% 
+    group_by(site_mean_dif) %>% 
+    summarize(bag_cones_opening_mean = mean(bag_cones_opening, na.rm = TRUE),
+              pol_release_mean = mean(pol_release, na.rm = TRUE))
+  site_mean_dif_df <- data.frame(site_mean_dif = -100:100)
+  cones_d_empir <- left_join(site_mean_dif_df, cones_d_empir) %>% 
+    mutate(bag_cones_opening_mean = case_when(site_mean_dif > 34 ~ 0,
+                                              site_mean_dif < -18 ~ 0,
+                                              TRUE ~ bag_cones_opening_mean),
+           pol_release_mean = case_when(site_mean_dif > 34 ~ 0,
+                                        site_mean_dif < -18 ~ 0,
+                                        TRUE ~ pol_release_mean)) %>% 
+    mutate(bag_cones_opening_mean_m = zoo::rollapply(bag_cones_opening_mean, 7, #one week moving average
+                                                     mean, na.rm = TRUE, partial = TRUE, align='center'),
+           pol_release_mean_m = zoo::rollapply(pol_release_mean, 7, 
+                                               mean, na.rm = TRUE, partial = TRUE, align='center'))
+  
+  ggplot(cones_d_empir, aes(x = site_mean_dif, y = bag_cones_opening_mean)) + geom_point()+
+    geom_line(aes(x = site_mean_dif, y = bag_cones_opening_mean_m)) + theme_bw() + 
+    xlab( "difference from modeled site mean (days)") + ylab("opening sacs (proportion of observations)") +
+    coord_cartesian(xlim = c(-25, 40) )
+  
+  ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point()+
+    geom_line(aes(x = site_mean_dif, y = pol_release_mean_m)) + theme_bw() + 
+    xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
+    coord_cartesian(xlim = c(-25, 40) )
+  
+  #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
+  
+  
+  
+  
+  
+### create an empirical model/animation of opening sacs in fs 2020/2021 with ssm #######################################
 library(tmap)
 library(magick)
 
 tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 
 #LOAD IN SSM
-ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_april.tif")
+ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
 par(mfrow = c(1,1))
 plot(ssm_2020_spring) #par(mfrow=c(1,1))
 
@@ -1131,7 +1397,7 @@ ssm_2020_peak_d <- ssm_2020_spring * site_mean_ssm_apr_fit$coefficients[2] + sit
 #d is with a start date of mdy("12-10-2020")
 plot(ssm_2020_peak_d)
 
-#empirical function of pollen release based on difference from peak date (sms regression)
+#empirical function of pollen release based on difference from peak date (ssm regression)
 cones_d_empir <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv") 
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
          days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
@@ -1195,7 +1461,7 @@ list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_o
 
 
 
-### create an empirical model/animation of opening sacs in fs 2019/2020 #######################################
+### create an empirical model/animation of opening sacs in fs 2019/2020 with ssm #######################################
 ssm_2019_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2019_april.tif")
 par(mfrow = c(1,1))
 plot(ssm_2019_spring) #par(mfrow=c(1,1))
@@ -1268,13 +1534,15 @@ list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_o
 
 
 
-### raster stack of opening sacs from 2015 - 2021 #######################################
+### raster stack of opening sacs from 2015 - 2021 with ssm #######################################
 ssm_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/", full = TRUE)
 ssm_file_list <- stringr::str_subset(ssm_file_list, pattern = "april") #just select the ones for april
 
-focal_year <- gsub("[^0-9-]", "", ssm_file_list[1]) 
+#go through each year in a loop
+for(j in 1:7){
+focal_year <- gsub("[^0-9-]", "", ssm_file_list[j]) 
 focal_year <- gsub("856", "", focal_year)
-ssm_focal_rast <- raster::raster(ssm_file_list[1])
+ssm_focal_rast <- raster::raster(ssm_file_list[j]) #ssm_focal_rast <- raster::raster(ssm_file_list[5])
 par(mfrow = c(1,1))
 plot(ssm_focal_rast) #par(mfrow=c(1,1))
 
@@ -1292,50 +1560,187 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   focal_day_date <- focal_day + mdy(paste("12-10-", focal_year))#focal_day + mdy("12-10-2019")
   days_from_peak_rast <- focal_day - ssm_focal_yr_peak_d  #plot(days_from_peak_rast)
   opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
-  names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
+ # names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
   
-  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel#ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+  names(opening_cones_day_x_rast) <- paste0("de_",  focal_day)
 # plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
   opening_cones_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
   
 } #end day loop
 
-focal_year_stack_name_terra <- terra::rast(opening_cones_stack)
+focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
 focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/",
                                 "sac_opening_yr", focal_year, ".tif")
 terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
 #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
 
-#test extract values within region of a 
+}#end year loop
+
+
+### extract sac opening time series from raster with ssm ###############################
+nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
+#nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
+nab_station_coords <- vect(nab_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
+                           type = "points", crs = "epsg:4326")
+plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords, add = TRUE)
+
+nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 25000)
+plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords_25km, add = TRUE)
+
+#loop through the raster from that year and extract cone opening data
+raster_extract_fun <- function(focal_raster){
+#focal_raster <- raster_list[y]
+focal_year <- substr(focal_raster, 93, 96)
+opening_cones_stack_terra <- terra::rast(focal_raster)
+NAB_opening_extract_raw <- terra::extract(opening_cones_stack_terra, nab_station_coords_25km, fun = "mean", na.rm = TRUE) #plot(focal_year_stack_name_terra[[1]])
+
+NAB_opening_extract <- NAB_opening_extract_raw %>% pivot_longer(cols = contains("de"), values_to = "rel_opening", 
+                                                                names_to = "day_experiment") %>%
+                       mutate(day_experiment = gsub(pattern = "de_", replacement = "", day_experiment),
+                              day_experiment = gsub(pattern = ".", replacement = "-", day_experiment, fixed = TRUE),
+                              day_experiment = as.numeric(day_experiment))
+nab_station_coords_join <- nab_station_coords_raw %>% mutate(ID = 1:nrow(nab_station_coords_raw)) #
+  
+NAB_opening_export <- left_join(NAB_opening_extract, nab_station_coords_join) %>%
+  mutate(env_year = focal_year,
+         fs_year = paste0("yr_", env_year, "_", as.numeric(env_year) + 1)) %>%
+  rename(NAB_station = site)
+return(NAB_opening_export)
+} #end extraction fun
+
+raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/", full = TRUE)
+pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
+
+pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
+ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
+  facet_wrap(~NAB_station, scales = "free_y")
+
+write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_aprilssm_25km.csv")
+
+### compare sac opening time series with NAB time series with ssm #########################
+# done in script: ripening_vs_airborne_p.R
 
 
 
 
-### load in NAB data ############################################################
 
-### extract sac opening time series from raster ###############################
+### raster stack of opening sacs from 2009 - 2021 with srad #######################################
+srad_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
+srad_file_list <- stringr::str_subset(srad_file_list, pattern = "gridMET_srad_TX_20") 
+
+cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
+cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
+                                           days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
+  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
+# #double check that I get the same environmental results when I extract from the raster compared to point extraction
+# env_srad_sf <- sf::st_as_sf(env_srad, coords = c("lat", "long"), crs = 4326) %>% filter(years == "20-21")
+# srad_rast_2020 <-  raster::raster(srad_file_list[1])
+# plot(srad_rast_2020); plot(env_srad_sf[1,1], add = TRUE)
+# env_srad_sf <- env_srad_sf %>% mutate(srad_jan_apr = raster::extract(srad_rast_2020, env_srad_sf))
+# test <- env_srad_sf %>%
+#   mutate(doy = yday(srad_date),
+#          mo = month(srad_date)) %>%
+#   filter(mo < 5) %>% #won't be perfectly accurate for leap years
+#   group_by(site_name, years, srad_jan_apr) %>%
+#   summarize(srad_jan_apr_calc = mean(env_c))
+# plot(test$srad_jan_apr, test$srad_jan_apr_calc) #env_srad coordinates were rounded, that's probably why it isn't completely perfect
+
+
+#go through each year in a loop
+for(j in 1:length(srad_file_list)){
+  focal_year <- gsub("[^0-9-]", "", srad_file_list[j])
+  focal_year <- gsub("856", "", focal_year)
+  srad_focal_rast <- raster::raster(srad_file_list[j]) #srad_focal_rast <- raster::raster(srad_file_list[5])
+  par(mfrow = c(1,1))
+  plot(srad_focal_rast) #par(mfrow=c(1,1))
+
+  #using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
+  site_mean_srad_jan_apr_fit
+  srad_focal_yr_peak_d <- srad_focal_rast * site_mean_srad_jan_apr_fit$coefficients[2] + site_mean_srad_jan_apr_fit$coefficients[1]
+  plot(srad_focal_yr_peak_d)
+
+  #loop for creating rasters and map frames
+  opening_cones_stack <- stack()
+  #for(i in 110:112){ #100 = Dec. 9th # 180 = Feb 27
+  for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
+    #create opening cones rasters
+    focal_day <- round(cones_d_empir$site_mean_dif[i], 0)
+    focal_day_date <- focal_day + mdy(paste("12-10-", focal_year))#focal_day + mdy("12-10-2019")
+    days_from_peak_rast <- focal_day - srad_focal_yr_peak_d  #plot(days_from_peak_rast)
+    opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
+    # names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
+
+    opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel#ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+    names(opening_cones_day_x_rast) <- paste0("de_",  focal_day)
+    # plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
+    opening_cones_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
+
+  } #end day loop
+
+  focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
+  focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/",
+                                  "sac_opening_yr", focal_year, ".tif")
+  terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
+  #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
+
+}#end year loop
+
+
+### extract sac opening time series from raster with srad ###############################
 library(terra)
 nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
 #nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
-
 nab_station_coords <- vect(nab_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
-                           type = "points")
+                           type = "points", crs = "epsg:4326")
+plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords, add = TRUE)
 
-test <- terra::extract(focal_year_stack_name_terra, nab_station_coords[1,])
+nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 100000)
+plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords_25km, add = TRUE)
 
+#loop through the raster from that year and extract cone opening data
+raster_extract_fun <- function(focal_raster){
+  #focal_raster <- raster_list[1]
+  focal_year <- substr(focal_raster, 99, 102)
+  opening_cones_stack_terra <- terra::rast(focal_raster)
+  NAB_opening_extract_raw <- terra::extract(opening_cones_stack_terra, nab_station_coords_25km, fun = "mean", na.rm = TRUE) #plot(focal_year_stack_name_terra[[1]])
+  
+  NAB_opening_extract <- NAB_opening_extract_raw %>% pivot_longer(cols = contains("de"), values_to = "rel_opening", 
+                                                                  names_to = "day_experiment") %>%
+    mutate(day_experiment = gsub(pattern = "de_", replacement = "", day_experiment),
+           day_experiment = gsub(pattern = ".", replacement = "-", day_experiment, fixed = TRUE),
+           day_experiment = as.numeric(day_experiment))
+  nab_station_coords_join <- nab_station_coords_raw %>% mutate(ID = 1:nrow(nab_station_coords_raw)) #
+  
+  NAB_opening_export <- left_join(NAB_opening_extract, nab_station_coords_join) %>%
+    mutate(env_year = focal_year,
+           fs_year = paste0("yr_", env_year, "_", as.numeric(env_year) + 1)) %>%
+    rename(NAB_station = site)
+  return(NAB_opening_export)
+} #end extraction fun
 
-### compare sac opening time series with NAB time series #########################
+raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/", full = TRUE)
+pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
 
-# ### create an empirical model/animation of cones opening in fs 2020/2021 as a function of sms regression########
+pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
+  ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
+  facet_wrap(~NAB_station, scales = "free_y")
+
+write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_april_srad_25km.csv")
+
+### compare sac opening time series with NAB time series with srad #########################
+# done in script: ripening_vs_airborne_p.R
+
+# ### create an empirical model/animation of cones opening in fs 2020/2021 as a function of ssm regression########
 # 
 # 
-# #predicted site mean date based on sms in spring 2020
-# yr2_env$d_sms <- fit_sms_spring2020$fitted.values
+# #predicted site mean date based on ssm in spring 2020
+# yr2_env$d_ssm <- fit_ssm_spring2020$fitted.values
 # 
 # 
-# ### making an empirical function for pollen release as a function of time difference from modeled site mean ~ sms spring 2020
+# ### making an empirical function for pollen release as a function of time difference from modeled site mean ~ ssm spring 2020
 # p_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
-# c_site_2021_join <- yr2_env %>% dplyr::select(site_name, site_mean_d = d_sms)
+# c_site_2021_join <- yr2_env %>% dplyr::select(site_name, site_mean_d = d_ssm)
 # p_2021 <- left_join(p_2021, c_site_2021_join) %>% 
 #   mutate(site_mean_date = site_mean_d + mdy("12-10-2020"),
 #          site_mean_dif = round(as.numeric(sample_date - site_mean_date), 0),
@@ -1376,7 +1781,7 @@ test <- terra::extract(focal_year_stack_name_terra, nab_station_coords[1,])
 #   xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
 #   coord_cartesian(xlim = c(-25, 40) )
 # 
-# #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_sms_pred_site_mean_day_210913.csv")
+# #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_ssm_pred_site_mean_day_210913.csv")
 # 
 # 
 # library(tmap)
@@ -1399,8 +1804,8 @@ test <- terra::extract(focal_year_stack_name_terra, nab_station_coords[1,])
 # # plot(tx_boundary, add = TRUE, col = NA)
 # 
 # #using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
-# fit_sms_spring2020
-# ssm_2020_peak_d <- ssm_2020_spring * fit_sms_spring2020$coefficients[2] + fit_sms_spring2020$coefficients[1]
+# fit_ssm_spring2020
+# ssm_2020_peak_d <- ssm_2020_spring * fit_ssm_spring2020$coefficients[2] + fit_ssm_spring2020$coefficients[1]
 # #d is with a start date of mdy("12-10-2020")
 # plot(ssm_2020_peak_d)
 # 
@@ -1471,7 +1876,7 @@ test <- terra::extract(focal_year_stack_name_terra, nab_station_coords[1,])
 
 
 
-# ### loading in surface soil moisture (sms) ########################################
+# ### loading in surface soil moisture (ssm) ########################################
 # susm_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_SMAP_SUSM_2019_2021_download_210419.csv")
 # 
 # susm <- 
@@ -1777,23 +2182,23 @@ test <- terra::extract(focal_year_stack_name_terra, nab_station_coords[1,])
 # 
 # 
 # 
-# sms %>% 
-#   filter(sms_date > ymd("20/03/20")) %>% 
-#   filter(sms_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
-#   ggplot(aes(x = sms_date, y = sms, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
+# ssm %>% 
+#   filter(ssm_date > ymd("20/03/20")) %>% 
+#   filter(ssm_date < ymd("20/06/01")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+#   ggplot(aes(x = ssm_date, y = ssm, group = site, color = d2)) + geom_line(lwd = 1.5, alpha =0.5) + theme_bw()+
 #   scale_color_viridis_c(labels=as.Date, name = "peak date") +
 #   xlab("date") + ylab("surface soil moisture (mm)")
-# summary(sms$sms)
+# summary(ssm$ssm)
 # 
 # formula <- y ~ x 
 # #formula <- y ~ x + I(x^2)
 # library(ggpmisc)
-# sms %>% 
-#   filter(sms_date > ymd("20/04/1")) %>% 
-#   filter(sms_date < ymd("20/05/1")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
+# ssm %>% 
+#   filter(ssm_date > ymd("20/04/1")) %>% 
+#   filter(ssm_date < ymd("20/05/1")) %>% #filter(site == "29.8 -99.9" | site == "30 -99.4") %>% 
 #   group_by(site, d, d2) %>% 
-#   summarize(sms_mean = mean(sms)) %>% #%T>% => test 
-#   ggplot(aes(x = sms_mean, y = d2)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
+#   summarize(ssm_mean = mean(ssm)) %>% #%T>% => test 
+#   ggplot(aes(x = ssm_mean, y = d2)) + geom_point() + #geom_smooth(method = "lm", se = FALSE) +
 #   geom_smooth(method = "lm", formula = formula, se = FALSE) +
 #   stat_poly_eq(aes(label =  paste(stat(rr.label), stat(p.value.label), sep = "*\", \"*")),
 #                formula = formula, parse = TRUE, label.x = .9) +
