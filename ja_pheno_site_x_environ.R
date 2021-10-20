@@ -1731,6 +1731,128 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 ### compare sac opening time series with NAB time series with srad #########################
 # done in script: ripening_vs_airborne_p.R
 
+
+
+
+
+
+
+### raster stack of opening sacs from 2009 - 2021 with prcp #######################################
+prcp_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
+prcp_file_list <- stringr::str_subset(prcp_file_list, pattern = "gridMET_prcp_TX_20") 
+
+cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
+cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
+                                           days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
+  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
+# #double check that I get the same environmental results when I extract from the raster compared to point extraction
+# env_prcp_sf <- sf::st_as_sf(env_prcp, coords = c("lat", "long"), crs = 4326) %>% filter(years == "20-21")
+# prcp_rast_2020 <-  raster::raster(prcp_file_list[1])
+# plot(prcp_rast_2020); plot(env_prcp_sf[1,1], add = TRUE)
+# env_prcp_sf <- env_prcp_sf %>% mutate(prcp_jan_dec = raster::extract(prcp_rast_2020, env_prcp_sf))
+# test <- env_prcp_sf %>%
+#   mutate(doy = yday(prcp_date),
+#          mo = month(prcp_date)) %>%
+#   filter(mo < 5) %>% #won't be perfectly accurate for leap years
+#   group_by(site_name, years, prcp_jan_dec) %>%
+#   summarize(prcp_jan_dec_calc = mean(env_c))
+# plot(test$prcp_jan_dec, test$prcp_jan_dec_calc) #env_prcp coordinates were rounded, that's probably why it isn't completely perfect
+
+
+#go through each year in a loop
+for(j in 1:length(prcp_file_list)){
+  focal_year <- gsub("[^0-9-]", "", prcp_file_list[j])
+  focal_year <- gsub("856", "", focal_year)
+  prcp_focal_rast <- raster::raster(prcp_file_list[j]) #prcp_focal_rast <- raster::raster(prcp_file_list[5])
+  par(mfrow = c(1,1))
+  plot(prcp_focal_rast) #par(mfrow=c(1,1))
+  
+  #using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
+  site_mean_prcp_jan_dec_fit
+  prcp_focal_yr_peak_d <- prcp_focal_rast * site_mean_prcp_jan_dec_fit$coefficients[2] + site_mean_prcp_jan_dec_fit$coefficients[1]
+  plot(prcp_focal_yr_peak_d)
+  
+  #loop for creating rasters and map frames
+  opening_cones_stack <- stack()
+  #for(i in 110:112){ #100 = Dec. 9th # 180 = Feb 27
+  for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
+    #create opening cones rasters
+    focal_day <- round(cones_d_empir$site_mean_dif[i], 0)
+    focal_day_date <- focal_day + mdy(paste("12-10-", focal_year))#focal_day + mdy("12-10-2019")
+    days_from_peak_rast <- focal_day - prcp_focal_yr_peak_d  #plot(days_from_peak_rast)
+    opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
+    # names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
+    
+    opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel#ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+    names(opening_cones_day_x_rast) <- paste0("de_",  focal_day)
+    # plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
+    opening_cones_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
+    
+  } #end day loop
+  
+  focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
+  focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/",
+                                  "sac_opening_yr", focal_year, ".tif")
+  terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
+  #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
+  
+}#end year loop
+
+
+### extract sac opening time series from raster with prcp ###############################
+library(terra)
+nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
+lb_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NASA_project/landon_coordinates.csv")
+all_station_coords <- bind_rows(nab_station_coords_raw, lb_station_coords_raw)
+
+#nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
+nab_station_coords <- vect(all_station_coords, geom=c("long", "lat"), #crs=crs(r, proj=T),
+                           type = "points", crs = "epsg:4326")
+plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords, add = TRUE)
+
+nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 100000) #width is radius in m
+plot(focal_year_stack_name_terra[[60]]); plot(nab_station_coords_25km, add = TRUE)
+
+#loop through the raster from that year and extract cone opening data
+raster_extract_fun <- function(focal_raster){
+  #focal_raster <- raster_list[1]
+  focal_year <- substr(focal_raster, 97, 100)
+  opening_cones_stack_terra <- terra::rast(focal_raster)
+  NAB_opening_extract_raw <- terra::extract(opening_cones_stack_terra, nab_station_coords_25km, fun = "mean", 
+                                            na.rm = TRUE) #plot(focal_year_stack_name_terra[[1]])
+  
+  NAB_opening_extract <- NAB_opening_extract_raw %>% pivot_longer(cols = contains("de"), values_to = "rel_opening", 
+                                                                  names_to = "day_experiment") %>%
+    mutate(day_experiment = gsub(pattern = "de_", replacement = "", day_experiment),
+           day_experiment = gsub(pattern = ".", replacement = "-", day_experiment, fixed = TRUE),
+           day_experiment = as.numeric(day_experiment))
+  nab_station_coords_join <- all_station_coords %>% mutate(ID = 1:nrow(all_station_coords)) #
+  
+  NAB_opening_export <- left_join(NAB_opening_extract, nab_station_coords_join) %>%
+    mutate(env_year = focal_year,
+           fs_year = paste0("yr_", env_year, "_", as.numeric(env_year) + 1)) %>%
+    rename(NAB_station = site)
+  return(NAB_opening_export)
+} #end extraction fun
+
+raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/", full = TRUE)
+pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
+
+pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
+  ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
+  facet_wrap(~NAB_station, scales = "free_y")
+
+write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_dec_prcp_25km.csv")
+
+### compare sac opening time series with NAB time series with prcp #########################
+# done in script: ripening_vs_airborne_p.R
+
+
+
+
+
+
+
 # ### create an empirical model/animation of cones opening in fs 2020/2021 as a function of ssm regression########
 # 
 # 
