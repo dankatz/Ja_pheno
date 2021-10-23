@@ -1401,6 +1401,17 @@ ggplot(idealized_sac_opening_curve, aes(x = day_before_peak, y = sac_opening_day
 #database was put together in: 
 #C:/Users/dsk856/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
 p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+length(unique(paste(p$x, p$y)))
+
+p %>% group_by(pollen_rel) %>% summarize(n = n()/ (142+231 + 540 + 169))
+summarize(p$pollen_rel)
+
+length(na.omit(p$bag_mean[p$bag_mean > 0.99]))/nrow(p)
+
+length(p$bag_cones_opening[p$bag_cones_opening > 0])
+length(p$bag_cones_opening[p$bag_cones_unopened > 0])
+length(p$perc_open[p$perc_open > 96])/nrow(p)
+
 #str(p)
 day_start <- mdy("12-10-2020")
 
@@ -1440,6 +1451,8 @@ p_all_sites <- p %>%
 #  filter(duplicate_visits == "single visit") #find duplicate visits at what should be snapshot sites and remove them 
 #%>% group_by(site_name, tree_n) %>% summarize(n_visits = n()) 
 
+#average number of trees per site
+#p_all_sites %>% dplyr::select(site, tree) %>% distinct() %>% group_by(site)%>% summarize(n = n()) %>% ungroup() %>% summarize(mean_n = mean(n))
 
 
 #adding in the assumption that all cones were closed on Dec 1 and open on March 1
@@ -1738,13 +1751,14 @@ jags <- jags.model('model_b.txt',
                      n_sites_snap = max(data_for_model_snap$site_n_snap)
                    ),
                    n.chains = 3,
-                   n.adapt = 100)  # diffuse priors
+                   n.adapt = 1000)  # diffuse priors
 
 #dic <- dic.samples(jags, n.iter = 1000, type = "pD"); print(dic) #model DIC
 #Sys.time()
-update(jags,n.iter = 8000) 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 2000, thin = 3) #variables to monitor #"b", "c" "b_snap"
+update(jags,n.iter = 9000) 
+mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 40000, thin = 10) #variables to monitor #"b", "c" "b_snap"
 plot(mcmc_samples_params)
+gelman.plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
 results_params2 <- data.frame(results_param$statistics, results_param$quantiles) #multi-var model
 results_params2$parameter<-row.names(results_params2)
@@ -1753,7 +1767,7 @@ hist(results_params2$Mean)
 
 
 #simulation for each tree core
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 40000, thin = 10) #variables to monitor
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)

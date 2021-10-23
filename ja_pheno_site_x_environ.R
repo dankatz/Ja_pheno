@@ -50,7 +50,8 @@ pheno_site_mean_gompertz_1920_2021 <- c_sites %>%
          y = y_site) %>% 
   dplyr::select(d, sd, x, y, site_name, years)
 #write_csv(pheno_site_mean_gompertz_1920_2021, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv")
-
+#day_start_2021 + min(pheno_site_mean_gompertz_1920_2021$d)
+#day_start_1920 + max(pheno_site_mean_gompertz_1920_2021$d)
 
 
 ## visualize site means across space
@@ -64,6 +65,8 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
         panel.grid.minor = element_blank(),
         panel.background = element_blank()) +
   coord_sf(datum=NA) #removes sf induced gridlines
+
+### SI section: cones open as a function of sampling height (multi-visit sites, year 2)######################################
 
 ### making an empirical function for pollen release as a function of time difference from pheno modeled site mean ##############
 p_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
@@ -1033,7 +1036,7 @@ env_ssm <-
   site_mean_ssm_apr <- site_mean_ssm_apr %>% mutate(d_ssm = site_mean_ssm_apr_fit$fitted.values,
                                                     d_resid = site_mean_ssm_apr_fit$residuals)  
 
-  ggplot(site_mean_ssm_apr, aes(x= d_ssm, y = d, color = d_ssm)) + geom_point()
+  #ggplot(site_mean_ssm_apr, aes(x= d_ssm, y = d, color = d_ssm)) + geom_point()
   
 ### figure for manuscript: SSM vs peak date
   fig_save <- ggplot(site_mean_ssm_apr, aes(x = env_mo_mean, y = b_date_peak_noyr)) + 
@@ -1248,12 +1251,12 @@ env_ssm <-
                                                mean, na.rm = TRUE, partial = TRUE, align='center'))
   
   ggplot(cones_d_empir, aes(x = site_mean_dif, y = bag_cones_opening_mean)) + geom_point()+
-    geom_line(aes(x = site_mean_dif, y = bag_cones_opening_mean_m)) + theme_bw() + 
+    geom_line(aes(x = site_mean_dif, y = bag_cones_opening_mean_m)) + ggthemes::theme_few() + 
     xlab( "difference from modeled site mean (days)") + ylab("opening sacs (proportion of observations)") +
     coord_cartesian(xlim = c(-25, 40) )
   
   ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point()+
-    geom_line(aes(x = site_mean_dif, y = pol_release_mean_m)) + theme_bw() + 
+    geom_line(aes(x = site_mean_dif, y = pol_release_mean_m)) + ggthemes::theme_few() + 
     xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
     coord_cartesian(xlim = c(-25, 40) )
   
@@ -1415,14 +1418,14 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   opening_on_day_x_rast <- reclassify(days_from_peak_rast, cones_d_empir2) #plot(opening_on_day_x_rast)
   names(opening_on_day_x_rast) <- paste("opening_", focal_day, sep = "")
    
-  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
+  opening_cones_day_x_rast <- opening_on_day_x_rast * ja_ba_rel#ja_ba_pres #ja_ba_rel #multiply daily release by ja_basal area (scaled to max)
   plot(opening_cones_day_x_rast, main = paste("date:", focal_day_date, "focal day: ", focal_day))
   opening_cones_pheno_stack <- stack(opening_cones_stack, opening_cones_day_x_rast) #plot(opening_cones_pheno_stack)
 
   #save each frame as a png
   date_title <- paste("opening cones on:\n", focal_day_date,"\n ") #convert Julian to date
   
-  png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_211015/",
+  png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/animations/cones_opening_smspred_ba_211022/",
     "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
 
 print(
@@ -1451,12 +1454,12 @@ dev.off()
 
 
 #creating an animation
-list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_211015/", 
+list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/", 
            pattern = "*.png", full.names = T) %>%
   purrr::map(image_read) %>% # reads each path file
   image_join() %>% # joins image
   image_animate(fps=1) %>% # animates, can opt for number of loops
-  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_211015/cone_opening_fs2021_v2.gif") 
+  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/cone_opening_fs2021_v2.gif") 
 
 
 
@@ -1632,7 +1635,9 @@ srad_file_list <- stringr::str_subset(srad_file_list, pattern = "gridMET_srad_TX
 cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
                                            days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
-  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
+  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, pol_release_mean_m)
+#bag_cones_opening_mean_m is the cones opening, 
+
 # #double check that I get the same environmental results when I extract from the raster compared to point extraction
 # env_srad_sf <- sf::st_as_sf(env_srad, coords = c("lat", "long"), crs = 4326) %>% filter(years == "20-21")
 # srad_rast_2020 <-  raster::raster(srad_file_list[1])
@@ -1691,11 +1696,16 @@ for(j in 1:length(srad_file_list)){
 library(terra)
 nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
 #nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
-nab_station_coords <- vect(nab_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
+lb_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NASA_project/landon_coordinates.csv") %>%
+                          dplyr::select(-nearest_city, -location_notes)
+all_station_coords_raw <- bind_rows(nab_station_coords_raw, lb_station_coords_raw)
+all_station_coords <- vect(all_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
                            type = "points", crs = "epsg:4326")
-plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords, add = TRUE)
 
-nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 100000)
+
+plot(focal_year_stack_name_terra[[30]]); plot(all_station_coords, add = TRUE)
+
+nab_station_coords_25km <- terra::buffer(all_station_coords, width = 25000)
 plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords_25km, add = TRUE)
 
 #loop through the raster from that year and extract cone opening data
@@ -1710,7 +1720,7 @@ raster_extract_fun <- function(focal_raster){
     mutate(day_experiment = gsub(pattern = "de_", replacement = "", day_experiment),
            day_experiment = gsub(pattern = ".", replacement = "-", day_experiment, fixed = TRUE),
            day_experiment = as.numeric(day_experiment))
-  nab_station_coords_join <- nab_station_coords_raw %>% mutate(ID = 1:nrow(nab_station_coords_raw)) #
+  nab_station_coords_join <- all_station_coords_raw %>% mutate(ID = 1:nrow(all_station_coords_raw)) #
   
   NAB_opening_export <- left_join(NAB_opening_extract, nab_station_coords_join) %>%
     mutate(env_year = focal_year,
@@ -1744,7 +1754,8 @@ prcp_file_list <- stringr::str_subset(prcp_file_list, pattern = "gridMET_prcp_TX
 cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
                                            days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
-  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
+  dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, pol_release_mean_m) #bag_cones_opening_mean_m
+
 # #double check that I get the same environmental results when I extract from the raster compared to point extraction
 # env_prcp_sf <- sf::st_as_sf(env_prcp, coords = c("lat", "long"), crs = 4326) %>% filter(years == "20-21")
 # prcp_rast_2020 <-  raster::raster(prcp_file_list[1])
@@ -1810,7 +1821,7 @@ nab_station_coords <- vect(all_station_coords, geom=c("long", "lat"), #crs=crs(r
                            type = "points", crs = "epsg:4326")
 plot(focal_year_stack_name_terra[[30]]); plot(nab_station_coords, add = TRUE)
 
-nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 100000) #width is radius in m
+nab_station_coords_25km <- terra::buffer(nab_station_coords, width = 25000) #width is radius in m
 plot(focal_year_stack_name_terra[[60]]); plot(nab_station_coords_25km, add = TRUE)
 
 #loop through the raster from that year and extract cone opening data

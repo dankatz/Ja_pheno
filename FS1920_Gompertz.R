@@ -181,6 +181,7 @@ pheno_sf %>% st_drop_geometry() %>%
 ### some data exploration #############################################################################
 p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
 
+
 #time series for each site
 p %>% 
   ggplot(aes(x =dates, y = pc_open_pc, group = tree, color = site_type)) + geom_jitter() + 
@@ -200,7 +201,9 @@ p %>%
 
 p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210907.csv") 
 
-
+#length(unique(p$tree))
+length(p$pc_open_pc[p$pc_open_pc < 1])/nrow(p)
+p %>% group_by(pollen_rel) %>% summarize(n = n()/(58 + 117 + 323 + 68))
 #str(p)
 day_start <- mdy("12-10-2019")
 
@@ -220,6 +223,10 @@ p_all_sites <- p %>%
   arrange(date3, tree_n) %>% 
   mutate(prop_open  = case_when(prop_open >= 0.99 ~ 0.99, #I don't think the number of open cones above 99% is robust due to cones that will
                                 prop_open < 0.99 ~ prop_open)) #never open and dropping of other cones. So I'm trying 95% as the asymptote
+  #length(unique(p_all_sites$site_n))
+
+#average number of trees per site
+#p_all_sites %>% dplyr::select(site, tree) %>% distinct() %>% group_by(site)%>% summarize(n = n()) %>% ungroup() %>% summarize(mean_n = mean(n))
 
   
 # #adding in the assumption that all cones were closed on Dec 1 and open on March 1

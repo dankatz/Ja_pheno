@@ -11,10 +11,10 @@ library(lubridate)
 ### NAB data in Texas ############################################################
 # load in NAB data 
 nab <- readr::read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_pollen_modeled_linear_interp_201002.csv") %>%
-  filter(NAB_station != "Houston") %>%
-  filter(NAB_station != "College Station") %>%
-  filter(NAB_station != "Dallas") %>%
-  filter(NAB_station != "Flower Mound") %>%
+  # filter(NAB_station != "Houston") %>%
+  # filter(NAB_station != "College Station") %>%
+  # filter(NAB_station != "Dallas") %>%
+  # filter(NAB_station != "Flower Mound") %>%
   filter(mo < 4 | mo > 11) %>%
   mutate(day_exp = case_when(mo < 4 ~ yday(date) + 21,
                              mo > 10 ~ yday(date) -  yday(dmy(paste(10, 12, year, sep = "/")))),
@@ -33,14 +33,14 @@ n_na <- nab %>%
 nab <- left_join(nab, n_na)
 
 nab %>% 
-  filter(n_NA < 20) %>%
+  #filter(n_NA < 40) %>%
   ggplot(aes(x = day_exp, y = Cupressaceae + 1)) + geom_point() + theme_bw() + facet_grid(yr_exp~NAB_station) +
   scale_y_log10() + 
   geom_line(aes(x = day_exp, y = Cupressaceae_m + 1), color = "red", lwd = 0.5)
 
 
 #filter out low data years
-nab_low_na <- nab %>% filter(n_NA < 20)
+nab_low_na <- nab %>% filter(n_NA < 50)
 
 
 #calculate cumulative pollen and relative position in accumulated pollen season
@@ -70,13 +70,15 @@ nearest_75 <- nab_low_na %>% group_by(NAB_station, yr_exp) %>%
   
 #some data visualization
 ggplot(nab_low_na, aes(x = day_exp, y = Cupressaceae_m + 1, color = cup_m_cumu_dist)) + geom_line() + theme_bw() + facet_grid(yr_exp~NAB_station) +
-  scale_y_log10() + scale_color_viridis_c() +
+  #scale_y_log10() + 
+  scale_color_viridis_c() +
   geom_point(data = nearest_25, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") +
   geom_point(data = nearest_50, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") +
   geom_point(data = nearest_75, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") 
 
 ggplot(nab_low_na, aes(x = day_exp, y = cup_m_cumu_dist + 1)) + geom_line() + theme_bw() + facet_grid(yr_exp~NAB_station) +
-  scale_y_log10() + scale_color_viridis_c() +
+  #scale_y_log10() + 
+  scale_color_viridis_c() +
   geom_point(data = nearest_25, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
   geom_point(data = nearest_50, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
   geom_point(data = nearest_75, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") 
@@ -89,7 +91,10 @@ pheno_preds_NAB <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/N
                     rename(day_exp = day_experiment,
                            yr_exp = fs_year) %>%
                     dplyr::select(-ID, -lat, -long) %>%
-                    filter(!is.na(rel_opening))
+                    filter(!is.na(rel_opening)) %>%
+                    filter(NAB_station == "Georgetown" | NAB_station == "San Antonio A" | NAB_station == "San Antonio B"|
+                           NAB_station == "Waco A" | NAB_station == "Waco B" | NAB_station == "College Station" |
+                           NAB_station == "Flower Mound" | NAB_station == "Dallas" | NAB_station == "Houston")
 
 pheno_season_total <- pheno_preds_NAB %>%
   group_by(NAB_station, yr_exp) %>%
@@ -123,16 +128,31 @@ nab_low_na
 
 nab_pheno_c <- left_join(nab_low_na, pheno_preds_NAB)
 
+#visualize phenology model at NAB stations
+nab_pheno_c %>%
+  ggplot(aes(x = day_exp, y = rel_opening)) + geom_line() + facet_grid(NAB_station ~ yr_exp) + theme_bw()
+
+
 #compare time series to NAB
-nab_pheno_c %>% filter(env_year > 2008) %>%
-ggplot(aes(x = day_exp, y = Cupressaceae_m + 1, color = opening_dist)) + geom_line() + theme_bw() + facet_grid(yr_exp~NAB_station) +
-  scale_y_log10() + scale_color_viridis_c() +
+nab_pheno_c %>% #filter(env_year > 2008) %>%
+
+  ggplot(aes(x = day_exp, y = Cupressaceae_m + 1, color = opening_dist)) + geom_line() + theme_bw() + 
+  facet_grid(NAB_station ~ year, scales = "free_y") +
+  #scale_y_log10() + 
+  scale_color_viridis_c() +
   geom_point(data = nearest_25, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") +
   geom_point(data = nearest_50, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") +
   geom_point(data = nearest_75, aes(x= day_exp, y = Cupressaceae_m + 1 ), col = "red") +
   geom_point(data = nearest_25_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") +
   geom_point(data = nearest_50_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") +
   geom_point(data = nearest_75_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") 
+
+#put both time series on the same fig
+nab_pheno_c %>%
+  ggplot(aes(x = day_exp, y = rel_opening)) + geom_line() + 
+  facet_grid(NAB_station ~ yr_exp, scales = "free_y") + ggthemes::theme_few() +
+  geom_point(data = nab_pheno_c, aes(x = day_exp, y = Cupressaceae/50000), alpha = 0.1, col = "red") + 
+  geom_line(data = nab_pheno_c, aes(x = day_exp, y = Cupressaceae/50000), alpha = 0.5, col = "red") 
 
 
 #compare season mid-points directly
@@ -205,19 +225,20 @@ lb_peak <- lb %>% group_by(site, yr_exp) %>% slice_max(order_by = concentration_
 
 
 #some data visualization
-ggplot(lb, aes(x = day_exp, y = concentration_m + 1, color = cup_m_cumu_dist)) + geom_line() + theme_bw() + 
-  facet_grid(yr_exp~site) +
-  scale_y_log10() + scale_color_viridis_c() +
-  geom_point(data = nearest_25, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = nearest_50, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = nearest_75, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = lb_peak, aes(x= day_exp, y = concentration_m_7d + 1 ), col = "blue") 
+ggplot(lb, aes(x = day_exp, y = concentration + 1, color = cup_m_cumu_dist)) + geom_line() + geom_point()+ theme_bw() + 
+  facet_grid(site~yr_exp, scales = "free_y") +
+  #scale_y_log10() + 
+  scale_color_viridis_c() +
+  geom_point(data = lb_nearest_25, aes(x= day_exp, y = -100 ), col = "red") +
+  geom_point(data = lb_nearest_50, aes(x= day_exp, y = -100 ), col = "red") +
+  geom_point(data = lb_nearest_75, aes(x= day_exp, y = -100 ), col = "red") +
+  geom_point(data = lb_peak, aes(x= day_exp, y = -100 ), col = "blue") 
 
 ggplot(lb, aes(x = day_exp, y = cup_m_cumu_dist + 1)) + geom_line() + theme_bw() + facet_grid(yr_exp~site) +
   scale_y_log10() + scale_color_viridis_c() +
-  geom_point(data = nearest_25, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
-  geom_point(data = nearest_50, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
-  geom_point(data = nearest_75, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") 
+  geom_point(data = lb_nearest_25, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
+  geom_point(data = lb_nearest_50, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") +
+  geom_point(data = lb_nearest_75, aes(x= day_exp, y = cup_m_cumu_dist + 1 ), col = "red") 
 
 
 ### cone opening preds compared to landon's data #########################################################################
@@ -243,7 +264,7 @@ pheno_preds_lb <- pheno_preds_lb %>%
          opening_dist = opening_cumu/opening_total) 
 
 #25 and 50% and 75% pollen season
-nearest_25_pheno <- pheno_preds_lb %>% group_by(site, yr_exp) %>% 
+nearest_25_pheno_lb <- pheno_preds_lb %>% group_by(site, yr_exp) %>% 
   filter(abs(opening_dist - 0.25) == min(abs(opening_dist - 0.25)))%>%
   rename(day_exp_p = day_exp)
 
@@ -252,7 +273,7 @@ nearest_50_pheno_lb <- pheno_preds_lb %>% group_by(site, yr_exp) %>%
   rename(day_exp_p = day_exp)
 
 
-nearest_75_pheno <- pheno_preds_lb %>% group_by(site, yr_exp) %>% 
+nearest_75_pheno_lb <- pheno_preds_lb %>% group_by(site, yr_exp) %>% 
   filter(abs(opening_dist - 0.75) == min(abs(opening_dist - 0.75))) %>%
   slice(1)%>%
   rename(day_exp_p = day_exp)
@@ -268,15 +289,22 @@ pheno_preds_lb %>%
 lb_pheno_c %>% filter(yr_exp == "yr_2009_2010" | yr_exp == "yr_2010_2011") %>%
   ggplot(aes(x = day_exp, y = concentration_m + 1, color = opening_dist)) + geom_line() + theme_bw() + 
   facet_grid(yr_exp~site) +
-  scale_y_log10() + scale_color_viridis_c() +
-  geom_point(data = nearest_25, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = nearest_50, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = nearest_75, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
-  geom_point(data = nearest_25_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") +
-  geom_point(data = nearest_50_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") +
-  geom_point(data = nearest_75_pheno, aes(x= day_exp_p, y = 1 ), col = "blue") +
+  #scale_y_log10() + 
+  scale_color_viridis_c() +
+  geom_point(data = lb_nearest_25, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
+  geom_point(data = lb_nearest_50, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
+  geom_point(data = lb_nearest_75, aes(x= day_exp, y = concentration_m + 1 ), col = "red") +
+  geom_point(data = nearest_25_pheno_lb, aes(x= day_exp_p, y = 1 ), col = "blue") +
+  geom_point(data = nearest_50_pheno_lb, aes(x= day_exp_p, y = 1 ), col = "blue") +
+  geom_point(data = nearest_75_pheno_lb, aes(x= day_exp_p, y = 1 ), col = "blue") +
   geom_point(data = lb_peak, aes(x= day_exp, y = concentration_m_7d ), col = "black") 
 
+#put both time series on the same fig
+pheno_preds_lb %>%
+  ggplot(aes(x = day_exp, y = rel_opening)) + geom_line() + facet_grid(site ~ yr_exp) + theme_bw() +
+  geom_point(data = lb, aes(x = day_exp, y = concentration/50000), alpha = 0.5) + 
+  geom_line(data = lb, aes(x = day_exp, y = concentration/50000), alpha = 0.5) +
+  xlab("day") + ylab("scaled pollen release and scaled airborne pollen")
 
 
 
@@ -288,9 +316,12 @@ nearest_50_lb_pheno <- left_join(lb_nearest_50_join, nearest_50_pheno_lb_join)
 nearest_50_lb_pheno %>%
   #filter(yr_exp != "yr_2015_2016") %>%
   ggplot(aes(x = day_exp_p, y = day_exp)) + geom_point(aes(color = site, shape = yr_exp)) + theme_bw() + 
-  geom_abline(slope = 1, intercept = 0, lty =2) + geom_smooth(method = "lm", se = FALSE)
-
-summary(lm(day_exp ~ day_exp_p, data = nearest_50_lb_pheno))
+  geom_abline(slope = 1, intercept = 0, lty =2) + geom_smooth(method = "lm", se = FALSE) + 
+  xlab("season midpoint predicted by phenological model (day)") +  ylab("observed peak in airborne pollen (day)")
+season_midpoint_fit <- lm(day_exp ~ day_exp_p, data = nearest_50_lb_pheno)
+summary(season_midpoint_fit)
+mean(abs(season_midpoint_fit$residuals))
+mean(abs(nearest_50_lb_pheno$day_exp - nearest_50_lb_pheno$day_exp_p), na.rm = TRUE)
 
 #compare day of highest pollen measurement with midpoint of sac opening
 nearest_50_lb_pheno <- left_join(lb_peak, nearest_50_pheno_lb_join)
