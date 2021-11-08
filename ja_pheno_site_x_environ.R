@@ -1042,14 +1042,15 @@ env_ssm <-
   fig_save <- ggplot(site_mean_ssm_apr, aes(x = env_mo_mean, y = b_date_peak_noyr)) + 
     #geom_abline(intercept = site_mean_env_mo_fit_sum$coefficients[1], slope = site_mean_env_mo_fit_sum$coefficients[2]) +
     geom_smooth(method = "lm", se = FALSE, color="black") +
-    geom_point(aes(color = years)) +
+    geom_point(aes(shape = years)) +
     scale_y_date()+ ylab("season midpoint (day)") +
+    scale_shape_manual(values = c(3, 4), labels = c("2019 - 2020", "2020 - 2021"), name = "year") + 
     xlab("surface soil moisture (mm)") + ggthemes::theme_few() + 
     annotate("text", x=17, y= mdy("1-23-2021"), label= "r^2 == 0.63", parse=TRUE) +
     annotate("text", x=17, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
   print(fig_save)
-  # ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_ssm_vs_peak.jpg", 
-  #        plot = fig_save, width = 7, height = 6, units ="in")
+  ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_ssm_vs_peak.jpg",
+         plot = fig_save, width = 7, height = 6, units ="in", dpi = 300)
 
   
 ### the best gridMET variable: SRAD in Jan - April ########################################
@@ -1803,7 +1804,7 @@ for(j in 1:length(prcp_file_list)){
   
   focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
   focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/",
-                                  "sac_opening_yr", focal_year, ".tif")
+                                  "sac_opening_yr", focal_year, ".tif") #focal_year <- 2021
   terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
   #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
   
@@ -1864,6 +1865,9 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 
 
 
+### SI section: cones open as a function of sampling height (multi-visit sites, year 2)######################################
+# this is in the sac_count_processing210303.R script
+#### SI section: correlation between environmental variables ###############################
 # ### create an empirical model/animation of cones opening in fs 2020/2021 as a function of ssm regression########
 # 
 # 
@@ -2339,3 +2343,46 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 # 
 # 
 # 
+
+
+# #
+# png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/",
+#                    "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
+# 
+# print(
+test <- opening_cones_stack_terra
+opening_cones_stack <- raster::stack(test)
+test2 <- opening_cones_stack[[10]]
+  
+#plot(opening_cones_stack)
+tm_shape(tx_boundary) +  tm_polygons(col = "white") + 
+    tm_shape(test2 * 100) + 
+    tm_raster(title = "relative cone opening/day (%)",  #have to use unicode to sneak in the superscript
+              legend.reverse = TRUE,
+              #legend.is.portrait = FALSE,
+              breaks = c(0, 10, 20, 30, 40, 50),
+              style = "cont", #style = "log10",
+              #labels = c("0.01","0.05","0.10","0.50", "1.0"),
+              palette = "-viridis") +
+    
+    tm_legend(outside = TRUE, legend.text.size = 1.0) + 
+    tm_compass() +
+    tm_scale_bar(breaks = c(0,2), text.size = 1) +
+    tm_layout(scale = 1.2,
+              legend.position = c("left", "top"), 
+              legend.title.size = 1.5,
+              title= "Dec 20",
+              title.size = 1.2,
+              title.position = c('left', 'top') )
+# )
+# dev.off()
+
+plot(opening_cones_stack_terra$de_15) 
+
+
+
+plot(tx_boundary$geometry)
+
+ggplot()
+
+

@@ -7,6 +7,7 @@ library(tidyr)
 library(imputeTS)
 library(ggpmisc)
 library(lubridate)
+library(sf)
 
 ### NAB data in Texas ############################################################
 # load in NAB data 
@@ -21,6 +22,21 @@ nab <- readr::read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_pollen_modeled_linear_
          yr_exp = case_when(mo < 4 ~ paste0("yr_", (year(date) -1 ), "_", year(date)),
                             mo > 10 ~ paste0("yr_", year(date), "_", (year(date) + 1))))
            
+
+#map of Texas with NAB data
+tx_boundary <- read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+NAB_subset <- nab %>% filter(date == "2019-01-08")
+ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
+  geom_point(aes(x = Long, y = Lat, color = Cupressaceae), #size = Observation_Date,#col = hilo2), pollen / max_p
+             data = NAB_subset, alpha = .95, size = 5)  + #scale_color_continuous(low = "blue", high = "red", name = "relative rank") + 
+  xlab("") + ylab("") + #theme_few() + 
+  scale_color_viridis_c(name = "airborne pollen (grains/m3)", option = "viridis") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()) +
+  coord_sf(datum=NA) #removes sf induced gridlines
+
+
     
 #detect low data years 
 n_na <- nab %>%
