@@ -1868,6 +1868,62 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 ### SI section: cones open as a function of sampling height (multi-visit sites, year 2)######################################
 # this is in the sac_count_processing210303.R script
 #### SI section: correlation between environmental variables ###############################
+ssm_2019 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2019_april.tif")
+prcp_2019 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/gridMET_prcp_TX_2019_jan_dec_c.tif") #plot(prcp_2019)
+rmin_2019 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/GRIDMET_rmin_TX_2019.tif")
+srad_2019 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/gridMET_srad_TX_2019_jan_april.tif") #plot(srad_2019)
+
+env_var_stack_2019 <- stack(ssm_2019, prcp_2019, rmin_2019, srad_2019)
+
+ja_pres <- raster("C:/Users/danka/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+ja_pres_r <- projectRaster(ja_pres, prcp_2019)
+ja_pres_r[ja_pres_r > 0] <- 1# plot(ja_pres_r)
+env_var_stack_2019_m <- raster::mask(env_var_stack_2019, ja_pres_r)
+plot(env_var_stack_2019_m)
+
+jnk=layerStats(env_var_stack_2019_m, 'pearson', na.rm=T)
+corr_matrix=jnk$'pearson correlation coefficient'
+corr_matrix
+
+
+prcp_2020 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/gridMET_prcp_TX_2020_jan_dec_c.tif")
+srad_2020 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/gridMET_srad_TX_2020_jan_april.tif")
+ssm_2020 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
+rmin_2020 <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/GRIDMET_rmin_TX_2020.tif")
+
+env_var_stack_2020 <- stack(ssm_2020, prcp_2020, rmin_2020, srad_2020)
+env_var_stack_2020_m <- raster::mask(env_var_stack_2020, ja_pres_r)
+plot(env_var_stack_2020_m)
+
+stats_2020 =layerStats(env_var_stack_2020_m, 'pearson', na.rm=T)
+corr_matrix_2020 = stats_2020$'pearson correlation coefficient'
+corr_matrix_2020
+
+
+#correlation in soil moisture from month to month
+ssm_2020_jan <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_jan.tif")
+ssm_2020_feb <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_feb.tif")
+ssm_2020_mar <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_mar.tif")
+ssm_2020_apr <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_apr.tif")
+ssm_2020_may <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_may.tif")
+ssm_2020_jun <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_jun.tif")
+ssm_2020_jul <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_jul.tif")
+ssm_2020_aug <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_aug.tif")
+ssm_2020_sep <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_sep.tif")
+ssm_2020_oct <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_oct.tif")
+ssm_2020_nov <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_nov.tif")
+ssm_2020_dec <- raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_dec.tif")
+
+env_var_stack_mo_2020 <- stack(ssm_2020_jan, ssm_2020_feb, ssm_2020_mar, ssm_2020_apr, ssm_2020_may, ssm_2020_jun, ssm_2020_jul,
+                               ssm_2020_aug, ssm_2020_sep, ssm_2020_oct, ssm_2020_nov, ssm_2020_dec)
+env_var_stack_mo_2020_m <- raster::mask(env_var_stack_mo_2020, ja_pres_r)
+plot(env_var_stack_mo_2020_m)
+
+stats_2020_mo =layerStats(env_var_stack_mo_2020_m, 'pearson', na.rm=T)
+corr_matrix_2020_mo = stats_2020_mo$'pearson correlation coefficient'
+corr_matrix_2020_mo <- round(corr_matrix_2020_mo, 2)
+write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
+
 # ### create an empirical model/animation of cones opening in fs 2020/2021 as a function of ssm regression########
 # 
 # 
