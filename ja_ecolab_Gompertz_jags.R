@@ -13,7 +13,7 @@ library(ggplot2)
 # ### an example with a toy dataset ##############################################
 # #https://github.com/xbouteiller/GompertzFit/blob/master/ModelGompertz.txt
 # #https://github.com/xbouteiller/GompertzFit
-# #file:///C:/Users/dsk856/Downloads/using-automated-sanding-to-homogeneously-break-seed-dormancy-in-black-locust-robinia-pseudoacacia-l-fabaceae.pdf
+# #file:///C:/Users/danka/Downloads/using-automated-sanding-to-homogeneously-break-seed-dormancy-in-black-locust-robinia-pseudoacacia-l-fabaceae.pdf
 # 
 # test <- matrix(c(0	,	0.004	,
 #           4	,	0.03	,
@@ -95,8 +95,8 @@ library(ggplot2)
 
 
 # ### trying to fit an individual tree of mine #######################################
-# #p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
-# p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+# #p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
+# p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
 # day_start <- mdy("12-10-2020")
 # p <- p %>%
 #   mutate(prop_open = bag_mean,#perc_open/100,
@@ -138,7 +138,7 @@ library(ggplot2)
 #   ggplot(aes(x = sample_date, y = prop_open, group = tree_n)) + geom_point(color = "red") + theme_bw() +
 #   geom_line(color = "red", lty = 3) + ylab("sacs open (proportion)") + xlab("")
 # 
-# # ggsave(filename = "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/fig_single_tree_a_210405.jpeg",
+# # ggsave(filename = "C:/Users/danka/Box/texas/pheno/manual_obs_models/fig_single_tree_a_210405.jpeg",
 # #        width = 10, height = 6, units = "in", scale = 0.5)
 # 
 # indiv_tree <- p %>% 
@@ -210,11 +210,11 @@ library(ggplot2)
 #   geom_point(data = indiv_tree, aes(x = day_experiment, y = prop_open), color = "red", size = 2) + 
 #    ylab("sacs open (proportion)") + xlab("")
 # 
-# # ggsave(filename = "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/fig_single_tree_b_210405.jpeg",
+# # ggsave(filename = "C:/Users/danka/Box/texas/pheno/manual_obs_models/fig_single_tree_b_210405.jpeg",
 # #        width = 10, height = 6, units = "in", scale = 0.5)
 
 ### fitting two trees at one site (independently) ##################################################
-# p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
+# p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
 # day_start <- mdy("12-13-2020")
 # 
 # p <- 
@@ -356,7 +356,7 @@ library(ggplot2)
 
 
 ### fitting all trees at one site (independently) ##################################################
-# p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
+# p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_data_download_210125_b_edited.csv")
 # day_start <- mdy("12-13-2020")
 # 
 # p_site1 <- 
@@ -501,8 +501,8 @@ library(ggplot2)
 
 
 ### fitting all trees at one site (hierarchical) ##################################################
-# p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
-# #p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_data_download_210127.csv")
+# p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+# #p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_data_download_210127.csv")
 # day_start <- mdy("12-10-2020")
 # 
 # p_site1 <- p %>%
@@ -558,7 +558,7 @@ library(ggplot2)
 #   ggplot(aes(x = sample_date, y = prop_open, group = tree_n, color = as.factor(tree_n))) + geom_point(size = 2) + theme_bw() +
 #   geom_line() + ylab("sacs open (proportion)") + xlab("") + theme(legend.position = "none")
 # 
-# # ggsave(filename = "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/fig_single_site_a_210405.jpeg",
+# # ggsave(filename = "C:/Users/danka/Box/texas/pheno/manual_obs_models/fig_single_site_a_210405.jpeg",
 # #        width = 10, height = 6, units = "in", scale = 0.5)
 # 
 # 
@@ -691,7 +691,7 @@ library(ggplot2)
 #   geom_point(data = p_site1, aes(x = day_experiment, y = prop_open, color = as.factor(tree_n))) + 
 #   xlab("day of experiment") + ylab("sacs open (proportion)") + theme(legend.position = "none")
 # 
-# # ggsave(filename = "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/fig_single_site_b_210405.jpeg",
+# # ggsave(filename = "C:/Users/danka/Box/texas/pheno/manual_obs_models/fig_single_site_b_210405.jpeg",
 # #        width = 10, height = 6, units = "in", scale = 0.5)
 # 
 
@@ -700,7 +700,7 @@ library(ggplot2)
 ### fitting all trees at all core sites (hierarchical) ##################################################
 # #NOTE: NEED TO CHECK ON DISTRIBUTIONS FOR SIGMA
 # 
-# p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_data_download_210205_b.csv") %>% 
+# p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_data_download_210205_b.csv") %>% 
 #   mutate(date = case_when( notes_1 == "12/10/2020 12:00 added after field season" ~ "12/10/2020 18:00",
 #                            notes_2 == "tree location approx. 1/8/21 ~4pm" ~ "1/8/2021 22:00",
 #                            TRUE ~ date))
@@ -926,7 +926,7 @@ library(ggplot2)
 #   geom_jitter(data = p_all_sites, aes(x = day_experiment, y = prop_open), color = "red") 
 # 
 # #site means across space
-# tx_boundary <- read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+# tx_boundary <- read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 # site_locations <- p_all_sites %>% 
 #   mutate(site_long = round(x, 1),
 #          site_lat = round(y,1)) %>% 
@@ -960,8 +960,8 @@ library(ggplot2)
 
 
 #database was put together in: 
-#C:/Users/dsk856/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
-p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+#C:/Users/danka/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
+p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
 #str(p)
 day_start <- mdy("12-10-2020")
 
@@ -1262,8 +1262,13 @@ results_params3 <- left_join(results_params2, site_n_core_join)
 
 ggplot()  + theme_bw() +
   geom_line(data = results_params3, aes(x = day_experiment, y = Mean, group = tree_n_core, color = tree_n_core)) +
-  geom_jitter(data = p_core_sites, aes(x = day_experiment, y = prop_open), width = 2, color = "red") +
+  geom_jitter(data = p_core_sites, aes(x = day_experiment, y = prop_open), width = .2, color = "red") +
   facet_wrap(~site_n_core)
+
+tree_midpoints_core <- results_params3 %>% distinct() %>% 
+  group_by(tree_n_core, site_n_core) %>% 
+  filter(abs(Mean - 0.5) == min(abs(Mean - 0.5)))
+
 
 
 ## simulation for each tree snap
@@ -1291,6 +1296,11 @@ ggplot()  + theme_bw() +
   geom_jitter(data = data_for_model_snap, aes(x = date3, y = prop_open), width = 2, color = "red") +
   facet_wrap(~site_n_snap) + xlab("day of experiment") + ylab("cones open (proportion)") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+tree_midpoints_snap <- results_params3 %>% distinct() %>% 
+  group_by(tree_n_snap, site_n_snap) %>% 
+  filter(abs(Mean - 0.5) == min(abs(Mean - 0.5)))
 
 
 ### extract site means for each site: core
@@ -1330,7 +1340,7 @@ site_export_df %>%
   ylab("Halfway point of season (mean +/- SD")+ xlab("site")
 
 ## visualize site means across space
-tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
   geom_point(aes(x = x_site, y = y_site, col = Mean),# size = pollen),#col = hilo2), pollen / max_p
              data = site_export_df, alpha = .7, size = 3)  + 
@@ -1342,7 +1352,7 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
   coord_sf(datum=NA) #removes sf induced gridlines
 
 ## export site means data
-readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_sacs_210909.csv")
+readr::write_csv(site_export_df, "C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_sacs_210909.csv")
 
 
 #export an idealized opening trajectory from all core sites
@@ -1391,16 +1401,16 @@ idealized_sac_opening_curve <- left_join(yhat_join, tree_b_join) %>%
   mutate(sac_opening_day = case_when(sac_opening_day < 0 ~ 0, TRUE ~ sac_opening_day))
   
 ggplot(idealized_sac_opening_curve, aes(x = day_before_peak, y = sac_opening_day)) + geom_point() + theme_bw()
-#write_csv(idealized_sac_opening_curve, "C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
-
+#write_csv(idealized_sac_opening_curve, "C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
+idealized_sac_opening_curve <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
 
 
 
 ### pollen cones, not pollen sacs: fitting all trees at all core sites and all snapshot sites (hierarchical) #############################
 
 #database was put together in: 
-#C:/Users/dsk856/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
-p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+#C:/Users/danka/Box/texas/pheno/manual_obs/manual sac counts/sac_count_processing210303.R
+p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
 length(unique(paste(p$x, p$y)))
 
 p %>% group_by(pollen_rel) %>% summarize(n = n()/ (142+231 + 540 + 169))
@@ -1552,7 +1562,7 @@ p_snap_sites <- p_all_sites_summarized %>%
 #   dplyr::select(x, y, site_name) %>% distinct() %>% 
 #   st_as_sf(., coords = c("x", "y")) %>% 
 #   st_set_crs(., 4326) %>% 
-#   st_write(.,  "C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_core_sites8.shp")
+#   st_write(.,  "C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_core_sites8.shp")
 
 # p_snap_sites %>% group_by(site_name) %>% 
 #   summarize(x = mean(x),
@@ -1560,7 +1570,7 @@ p_snap_sites <- p_all_sites_summarized %>%
 #   dplyr::select(x, y, site_name) %>% distinct() %>% 
 #   st_as_sf(., coords = c("x", "y")) %>% 
 #   st_set_crs(., 4326) %>% 
-#   st_write(.,  "C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_snap_sites8.shp")
+#   st_write(.,  "C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_snap_sites8.shp")
 
 #can cone drop be used to indicate time since cones opened? #doesn't look great
 # p_core_sites %>% 
@@ -1888,7 +1898,7 @@ ggplot(aes(x = site_name, y = Mean + day_start, ymin = Mean - SD + day_start, ym
   ylab("Halfway point of season (mean +/- SD")+ xlab("site")
   
 ## visualize site means across space
-tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
   geom_point(aes(x = x_site, y = y_site, col = Mean),# size = pollen),#col = hilo2), pollen / max_p
              data = site_export_df, alpha = .7, size = 3)  + 
@@ -1900,7 +1910,7 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
   coord_sf(datum=NA) #removes sf induced gridlines
 
 ## export site means data
-readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv")
+readr::write_csv(site_export_df, "C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv")
 
 
 
@@ -1918,7 +1928,7 @@ tree_b_join <- tree_b %>%
                 b_sd = SD,
                 tree_n_core)
 tree_b_save <- left_join(tree_b_join, p_core_sites_tree_key) 
-#write_csv(tree_b_save, "C:/Users/dsk856/Box/texas/pheno/manual_obs/modeled_cone_peak_day_param_b_210910.csv")
+#write_csv(tree_b_save, "C:/Users/danka/Box/texas/pheno/manual_obs/modeled_cone_peak_day_param_b_210910.csv")
 
 
 
@@ -1954,6 +1964,6 @@ idealized_cone_opening_curve <- left_join(yhat_join, tree_b_join) %>%
 
 ggplot(idealized_cone_opening_curve, aes(x = day_before_peak, y = cone_opening_day * 100)) + geom_point() + theme_bw() +
   xlab("day from peak") + ylab("cones opening on day (%)")
-#write_csv(idealized_cone_opening_curve, "C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
+#write_csv(idealized_cone_opening_curve, "C:/Users/danka/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
 
 

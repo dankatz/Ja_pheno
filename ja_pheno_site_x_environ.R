@@ -6,7 +6,7 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 library(climwin)
-library(imputeTS)
+library(imputeTS) 
 library(ggpmisc)
 library(raster)
 library(sf)
@@ -19,12 +19,12 @@ library(zoo)
 ### load in observational data from year 1 and year 2 ####################################################
 
 #load in site level-estimates: cones for field season 2021
-c_site_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210910.csv") %>% 
+c_site_1920 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/fs19_20_site_halfway_cones_210910.csv") %>% 
   mutate(years = "19-20")
- c_site_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv") %>%
+ c_site_2021 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv") %>%
    mutate(years = "20-21") %>% 
     mutate(organ = "cones")
-# c_site_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_halfway_sacs_210909.csv") %>% 
+# c_site_2021 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_sacs_210909.csv") %>% 
 #   mutate(years = "20-21") %>% 
 #   mutate(organ = "pollen sacs")
 # 
@@ -49,13 +49,13 @@ pheno_site_mean_gompertz_1920_2021 <- c_sites %>%
          x = x_site,
          y = y_site) %>% 
   dplyr::select(d, sd, x, y, site_name, years)
-#write_csv(pheno_site_mean_gompertz_1920_2021, "C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv")
+#write_csv(pheno_site_mean_gompertz_1920_2021, "C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv")
 #day_start_2021 + min(pheno_site_mean_gompertz_1920_2021$d)
 #day_start_1920 + max(pheno_site_mean_gompertz_1920_2021$d)
 
 
 ## visualize site means across space
-tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA) +
   geom_jitter(aes(x = x_site, y = y_site, col = Mean),# size = pollen),#col = hilo2), pollen / max_p
              data = c_sites, alpha = .7, size = 3)  + facet_wrap(~years)+
@@ -69,7 +69,7 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 ### SI section: cones open as a function of sampling height (multi-visit sites, year 2)######################################
 
 ### making an empirical function for pollen release as a function of time difference from pheno modeled site mean ##############
-p_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+p_2021 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
 c_site_2021_join <- c_site_2021 %>% dplyr::select(site_name, site_mean_d = Mean)
 p_2021 <- left_join(p_2021, c_site_2021_join) %>% 
   mutate(site_mean_date = site_mean_d + mdy("12-10-2020"),
@@ -111,13 +111,13 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
   xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
   coord_cartesian(xlim = c(-25, 40) )
 
-#write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv")
+#write_csv(cones_d_empir, "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv")
 
 
 # ### SMAP: loading in surface soil moisture (ssm) ########################################
 # #SMAP download script is Google Earth Engine in: TX_Ja_pheno
 # 
-# ssm_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
+# ssm_raw <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
 #                     na = "No data")
 # 
 # ssm <- 
@@ -203,7 +203,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   
 # 
 # #plotting raw ssm rasters
-# ssm_2019_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2021_spring.tif")
+# ssm_2019_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/SMAP_ssm_TX_2021_spring.tif")
 # tm_shape(ssm_2019_spring) + 
 #   tm_raster(title = "spring soil moisture",  
 #             legend.reverse = TRUE,
@@ -216,7 +216,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #             title.size = 1.2, title.position = c('left', 'top') ) +
 #   tm_shape(tx_boundary) +  tm_polygons(col = "white", alpha = 0) 
 # 
-# ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
+# ssm_2020_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
 # tm_shape(ssm_2020_spring) + 
 #   tm_raster(title = "spring soil moisture",  
 #             legend.reverse = TRUE,
@@ -234,7 +234,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # ### vpd: loading in vapor pressure deficit (from daymet) ########################################
 # #download script is Google Earth Engine in: TX_Ja_pheno
 # 
-# vpd_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_vp_2018_2020_download.csv",
+# vpd_raw <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/DAYMET_vp_2018_2020_download.csv",
 #                     na = "No data")
 # 
 # vpd <- 
@@ -322,7 +322,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # ### combining different variables ##################################################
 # # vpd_spring19
 # # vpd_summerfall19
-# tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+# tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 # 
 # 
 # 
@@ -470,12 +470,12 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 # 
 # ### loop exploration through the other datasets ########################################
 # #download script is Google Earth Engine in: TX_Ja_pheno
-# env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
-# pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv")
+# env_data_list <- dir("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
+# pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv")
 # 
 # for(i in 1:5){
 # env_raw <- read_csv(env_data_list[i], na = "No data") #i <- 8 #str(env_raw)
-# focal_dataset_name <- gsub(x = dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/"),
+# focal_dataset_name <- gsub(x = dir("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/"),
 #                       "_download.csv", "")[i]
 # 
 # env <- 
@@ -510,7 +510,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   xlab("date") + ylab(focal_dataset_name)
 # 
 # ggsave(plot = env_summary_plot_yr2, 
-#        filename = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
+#        filename = paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
 #                          focal_dataset_name, "yr2.png"),
 #        height = 10,
 #        width = 14,
@@ -527,7 +527,7 @@ ggplot(cones_d_empir, aes(x = site_mean_dif, y = pol_release_mean)) + geom_point
 #   xlab("date") + ylab(focal_dataset_name)
 # 
 # ggsave(plot = env_summary_plot_yr2, 
-#        filename = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
+#        filename = paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/loop_explor/", 
 #                          focal_dataset_name, "yr1.png"),
 #        height = 10,
 #        width = 14,
@@ -605,8 +605,8 @@ plotwin2 <- function(dataset, cw = 0.95){
 }
 
 #environmental data available at all sites
-env_data_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
-pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+env_data_list <- dir("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/", full.names = TRUE)
+pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
   mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
                                  years == "20-21" ~ d + mdy("12-10-2020")),
          b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
@@ -622,7 +622,7 @@ names(env_table) <- c("env_var", "window_open", "window_close", "window_open_jul
 for(i in 20:20){ #length(env_data_list2) #i <- 20 #str(env_raw)
 env_raw <- read_csv(env_data_list2[i], na = "No data") 
 focal_dataset_name <- gsub(x = env_data_list2[i],
-                           pattern = ("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/|_download.csv"),
+                           pattern = ("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/|_download.csv"),
                            replacement = "")
 print(focal_dataset_name)
 
@@ -731,12 +731,12 @@ fig_save <- ggplot(site_mean_env_mo, aes(x = env_mo_mean, y = d)) +
   xlab(focal_dataset_name) + theme_bw() + ggtitle(paste0("R2=", round(site_mean_env_mo_fit_sum$r.squared, 3)))
 
 print(fig_save)
-file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/",
+file_name_save <- paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/",
                          focal_dataset_name,".jpg")
 ggsave(filename = file_name_save, plot = fig_save)
 
 #save the selected window's environmental data too (site_mean_env_mo) 
-write_csv(site_mean_env_mo, file = paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/env_mo_csvs/",
+write_csv(site_mean_env_mo, file = paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/env_mo_csvs/",
                                           focal_dataset_name,"_mo.csv"))
 
 # str(MassOutput)
@@ -779,7 +779,7 @@ write_csv(site_mean_env_mo, file = paste0("C:/Users/dsk856/Box/texas/pheno/met_d
 # fig_save <- ggplot(medianoc_df, aes(x = env, y = yvar)) + geom_point(aes(color = years)) + geom_smooth(method = "lm", se = F) + 
 #   xlab(focal_dataset_name) + theme_bw() + ggtitle(paste0("R2=", round(medianoc_fit$r.squared, 3)))
 # fig_save
-# file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor/",
+# file_name_save <- paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor/",
 #                          focal_dataset_name,".jpg")
 # ggsave(filename = file_name_save, plot = fig_save)
 
@@ -834,14 +834,14 @@ plothist(dataset = MassOutput, datasetrand = MassRand[[1]]) #hist(MassRand[[1]])
 #result: adding in the best variable (gridMET SRAD only added an R2 of 0.06)
 
 #adding in the SMAP SSM data
-ssm <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/env_mo_csvs/SMAP10KM_ssm_2018_2020_mo.csv")
+ssm <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/env_mo_csvs/SMAP10KM_ssm_2018_2020_mo.csv")
 ssm <- ssm %>% mutate(ssm = env_mo_mean)
 
 #loop through each met dataset to assess optimal open and close dates and model fit
 for(i in 1:21){ #length(env_data_list2) #i <- 20 #str(env_raw)
   env_raw <- read_csv(env_data_list2[i], na = "No data") 
   focal_dataset_name <- gsub(x = env_data_list2[i],
-                             pattern = ("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/|_download.csv"),
+                             pattern = ("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/|_download.csv"),
                              replacement = "")
   print(focal_dataset_name)
   
@@ -950,7 +950,7 @@ for(i in 1:21){ #length(env_data_list2) #i <- 20 #str(env_raw)
                    ", extra var p = ", round(site_mean_env_mo_fit_sum$coefficients[11], 3)))
   
   fig_save
-  file_name_save <- paste0("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/with_ssm/",
+  file_name_save <- paste0("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/climwin_loop_explor_mo/with_ssm/",
                            focal_dataset_name,".jpg")
   ggsave(filename = file_name_save, plot = fig_save)
 
@@ -976,14 +976,14 @@ write.table(env_table, "clipboard", sep="\t", row.names=FALSE)
 ### the best single variable: SSM in April ########################################
 
 #load in pheno data
-pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
   mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
                                  years == "20-21" ~ d + mdy("12-10-2020")),
          b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
                                         years == "20-21" ~ "28/12/2020"))
 
 #load in environmental data: SSM from April 
-ssm_plots <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
+ssm_plots <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/SMAP10KM_ssm_2018_2020_download.csv",
                       na = "No data")
 
 env_ssm <- 
@@ -1049,21 +1049,21 @@ env_ssm <-
     annotate("text", x=17, y= mdy("1-23-2021"), label= "r^2 == 0.63", parse=TRUE) +
     annotate("text", x=17, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
   print(fig_save)
-  ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_ssm_vs_peak.jpg",
+  ggsave(filename = "C:/Users/danka/Box/texas/writing/pheno/fig3b_site_ssm_vs_peak.jpg",
          plot = fig_save, width = 7, height = 6, units ="in", dpi = 300)
 
   
 ### the best gridMET variable: SRAD in Jan - April ########################################
   
   #load in pheno data
-  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
     mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
                                    years == "20-21" ~ d + mdy("12-10-2020")),
            b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
                                           years == "20-21" ~ "28/12/2020"))
   
   #load in environmental data: SSM from April 
-  srad_plots <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_srad_2018_2021_download.csv",
+  srad_plots <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_srad_2018_2021_download.csv",
                         na = "No data")
   
   env_srad <- 
@@ -1128,21 +1128,21 @@ env_ssm <-
     annotate("text", x=167, y= mdy("1-23-2021"), label= "r^2 == 0.59", parse=TRUE) +
     annotate("text", x=167, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
   print(fig_save)
-  # ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_srad_vs_peak.jpg", 
+  # ggsave(filename = "C:/Users/danka/Box/texas/writing/pheno/fig3b_site_srad_vs_peak.jpg", 
   #        plot = fig_save, width = 7, height = 6, units ="in")
   
   
 ### the most reasonable gridMET variable: precip in Jan - Dec ########################################
   
   #load in pheno data
-  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/dsk856/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
+  pheno_site_mean_gompertz_1920_2021 <- read_csv("C:/Users/danka/Box/texas/pheno/fs20_21_site_coords_210907.csv") %>% 
     mutate(b_date_peak = case_when(years == "19-20" ~ d + mdy("12-10-2019"),
                                    years == "20-21" ~ d + mdy("12-10-2020")),
            b_date_placeholder = case_when(years == "19-20" ~ "28/12/2019", #some issue with data download from GEE?
                                           years == "20-21" ~ "28/12/2020"))
   
   #load in environmental data
-  prcp_plots <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_pr_2018_2021_download.csv",
+  prcp_plots <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/GRIDMET_pr_2018_2021_download.csv",
                          na = "No data")
   
   env_prcp <- 
@@ -1208,14 +1208,14 @@ env_ssm <-
     annotate("text", x=3, y= mdy("1-23-2021"), label= "r^2 == 0.53", parse=TRUE) +
     annotate("text", x=3, y= mdy("1-21-2021"), label= "p < 0.001", parse=FALSE) 
   print(fig_save)
-  # ggsave(filename = "C:/Users/dsk856/Box/texas/writing/pheno/fig3b_site_prcp_vs_peak.jpg", 
+  # ggsave(filename = "C:/Users/danka/Box/texas/writing/pheno/fig3b_site_prcp_vs_peak.jpg", 
   #        plot = fig_save, width = 7, height = 6, units ="in")
   
   
 ### empirical function for pollen release as a function of ssm in April ##############
   site_mean_ssm_apr #need to run the previous section first
-  #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
-  p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+  #p_1920 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+  p_2021_raw <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
   
   site_mean_ssm_apr_join <- site_mean_ssm_apr %>% dplyr::select(site_name, site_mean_d = d_ssm)
   
@@ -1261,13 +1261,13 @@ env_ssm <-
     xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
     coord_cartesian(xlim = c(-25, 40) )
   
-  #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv")
+  #write_csv(cones_d_empir, "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv")
   
   
 ### empirical function for pollen release as a function of srad in Jan - April ##############
   site_mean_srad_jan_apr #need to run the previous section first
-  #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
-  p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+  #p_1920 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+  p_2021_raw <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
   
   site_mean_srad_jan_apr_join <- site_mean_srad_jan_apr %>% dplyr::select(site_name, site_mean_d = d_srad)
   
@@ -1313,7 +1313,7 @@ env_ssm <-
     xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
     coord_cartesian(xlim = c(-25, 40) )
   
-  #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
+  #write_csv(cones_d_empir, "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
   
   
   
@@ -1321,8 +1321,8 @@ env_ssm <-
 
 ### empirical function for pollen release as a function of prcp in Jan - Dec ##############
   site_mean_prcp_jan_dec #need to run the previous section first
-  #p_1920 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
-  p_2021_raw <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+  #p_1920 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+  p_2021_raw <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
   
   site_mean_prcp_jan_dec_join <- site_mean_prcp_jan_dec %>% dplyr::select(site_name, site_mean_d = d_prcp)
   
@@ -1368,7 +1368,7 @@ env_ssm <-
     xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
     coord_cartesian(xlim = c(-25, 40) )
   
-  #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
+  #write_csv(cones_d_empir, "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
   
   
   
@@ -1378,15 +1378,15 @@ env_ssm <-
 library(tmap)
 library(magick)
 
-tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 
 #LOAD IN SSM
-ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
+ssm_2020_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
 par(mfrow = c(1,1))
 plot(ssm_2020_spring) #par(mfrow=c(1,1))
 
 #load in the Ja abundance map
-ja_ba_orig <- raster("C:/Users/dsk856/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+ja_ba_orig <- raster("C:/Users/danka/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
 ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring)
 plot(ja_ba); plot(tx_boundary, add = TRUE, col = NA)
 ja_ba_rel <- ja_ba/98.40555  #max(ja_ba$Ashe_juniper_basal_area_3km)
@@ -1402,7 +1402,7 @@ ssm_2020_peak_d <- ssm_2020_spring * site_mean_ssm_apr_fit$coefficients[2] + sit
 plot(ssm_2020_peak_d)
 
 #empirical function of pollen release based on difference from peak date (ssm regression)
-cones_d_empir <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv") 
+cones_d_empir <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_ssm_day_211015.csv") 
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
          days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
   dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
@@ -1426,7 +1426,7 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   #save each frame as a png
   date_title <- paste("opening cones on:\n", focal_day_date,"\n ") #convert Julian to date
   
-  png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/animations/cones_opening_smspred_ba_211022/",
+  png(filename=paste("C:/Users/danka/Box/texas/pheno/manual_obs_models/animations/cones_opening_smspred_ba_211022/",
     "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
 
 print(
@@ -1455,23 +1455,23 @@ dev.off()
 
 
 #creating an animation
-list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/", 
+list.files(path = "C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/", 
            pattern = "*.png", full.names = T) %>%
   purrr::map(image_read) %>% # reads each path file
   image_join() %>% # joins image
   image_animate(fps=1) %>% # animates, can opt for number of loops
-  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/cone_opening_fs2021_v2.gif") 
+  image_write("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_ba_211022/cone_opening_fs2021_v2.gif") 
 
 
 
 
 ### create an empirical model/animation of opening sacs in fs 2019/2020 with ssm #######################################
-ssm_2019_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2019_april.tif")
+ssm_2019_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/SMAP_ssm_TX_2019_april.tif")
 par(mfrow = c(1,1))
 plot(ssm_2019_spring) #par(mfrow=c(1,1))
 
 #check that this box includes all of TX
-# tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+# tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 # plot(tx_boundary, add = TRUE, col = NA)
 
 #using the best fit of soil moisture to predict time of maximum pollen release
@@ -1500,7 +1500,7 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
   #save each frame as a png
   date_title <- paste("opening cones on:\n", focal_day_date,"\n ") #convert Julian to date
   
-  png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/",
+  png(filename=paste("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/",
                      "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
   
   print(
@@ -1529,17 +1529,17 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
 
 
 #creating an animation
-list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/", 
+list.files(path = "C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/", 
            pattern = "*.png", full.names = T) %>%
   purrr::map(image_read) %>% # reads each path file
   image_join() %>% # joins image
   image_animate(fps=1) %>% # animates, can opt for number of loops
-  image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/cone_opening_fs1920.gif") 
+  image_write("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/cone_opening_fs1920.gif") 
 
 
 
 ### raster stack of opening sacs from 2015 - 2021 with ssm #######################################
-ssm_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/", full = TRUE)
+ssm_file_list <- dir("C:/Users/danka/Box/texas/pheno/met_data/", full = TRUE)
 ssm_file_list <- stringr::str_subset(ssm_file_list, pattern = "april") #just select the ones for april
 
 #go through each year in a loop
@@ -1574,7 +1574,7 @@ for(i in 98:179){ #100 = Dec. 9th # 180 = Feb 27
 } #end day loop
 
 focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
-focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/",
+focal_year_stack_name <- paste0("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/",
                                 "sac_opening_yr", focal_year, ".tif")
 terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
 #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
@@ -1583,7 +1583,7 @@ terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite
 
 
 ### extract sac opening time series from raster with ssm ###############################
-nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
+nab_station_coords_raw <- read_csv("C:/Users/danka/Box/texas/NAB/NAB_tx_coords.csv")
 #nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
 nab_station_coords <- vect(nab_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
                            type = "points", crs = "epsg:4326")
@@ -1613,14 +1613,14 @@ NAB_opening_export <- left_join(NAB_opening_extract, nab_station_coords_join) %>
 return(NAB_opening_export)
 } #end extraction fun
 
-raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/", full = TRUE)
+raster_list <- dir("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_smsapril_stacks/", full = TRUE)
 pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
 
 pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
 ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
   facet_wrap(~NAB_station, scales = "free_y")
 
-write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_aprilssm_25km.csv")
+write_csv(pheno_preds_NAB, "C:/Users/danka/Box/texas/pheno/manual_obs_models/NAB_opening_preds_aprilssm_25km.csv")
 
 ### compare sac opening time series with NAB time series with ssm #########################
 # done in script: ripening_vs_airborne_p.R
@@ -1630,10 +1630,10 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 
 
 ### raster stack of opening sacs from 2009 - 2021 with srad #######################################
-srad_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
+srad_file_list <- dir("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
 srad_file_list <- stringr::str_subset(srad_file_list, pattern = "gridMET_srad_TX_20") 
 
-cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
+cones_d_empir <- read_csv( "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_srad_day_211019.csv")
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
                                            days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
   dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, pol_release_mean_m)
@@ -1685,7 +1685,7 @@ for(j in 1:length(srad_file_list)){
   } #end day loop
 
   focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
-  focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/",
+  focal_year_stack_name <- paste0("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/",
                                   "sac_opening_yr", focal_year, ".tif")
   terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
   #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
@@ -1695,9 +1695,9 @@ for(j in 1:length(srad_file_list)){
 
 ### extract sac opening time series from raster with srad ###############################
 library(terra)
-nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
+nab_station_coords_raw <- read_csv("C:/Users/danka/Box/texas/NAB/NAB_tx_coords.csv")
 #nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
-lb_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NASA_project/landon_coordinates.csv") %>%
+lb_station_coords_raw <- read_csv("C:/Users/danka/Box/texas/NASA_project/landon_coordinates.csv") %>%
                           dplyr::select(-nearest_city, -location_notes)
 all_station_coords_raw <- bind_rows(nab_station_coords_raw, lb_station_coords_raw)
 all_station_coords <- vect(all_station_coords_raw, geom=c("long", "lat"), #crs=crs(r, proj=T),
@@ -1730,14 +1730,14 @@ raster_extract_fun <- function(focal_raster){
   return(NAB_opening_export)
 } #end extraction fun
 
-raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/", full = TRUE)
+raster_list <- dir("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_srad_jan_april_stacks/", full = TRUE)
 pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
 
 pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
   ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
   facet_wrap(~NAB_station, scales = "free_y")
 
-write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_april_srad_25km.csv")
+write_csv(pheno_preds_NAB, "C:/Users/danka/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_april_srad_25km.csv")
 
 ### compare sac opening time series with NAB time series with srad #########################
 # done in script: ripening_vs_airborne_p.R
@@ -1749,10 +1749,10 @@ write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NA
 
 
 ### raster stack of opening sacs from 2009 - 2021 with prcp #######################################
-prcp_file_list <- dir("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
+prcp_file_list <- dir("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/", full = TRUE)
 prcp_file_list <- stringr::str_subset(prcp_file_list, pattern = "gridMET_prcp_TX_20") 
 
-cones_d_empir <- read_csv( "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
+cones_d_empir <- read_csv( "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_prcp_day_211019.csv")
 cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
                                            days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
   dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, pol_release_mean_m) #bag_cones_opening_mean_m
@@ -1803,7 +1803,7 @@ for(j in 1:length(prcp_file_list)){
   } #end day loop
   
   focal_year_stack_name_terra <- terra::rast(opening_cones_stack) #str(opening_cones_stack)
-  focal_year_stack_name <- paste0("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/",
+  focal_year_stack_name <- paste0("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/",
                                   "sac_opening_yr", focal_year, ".tif") #focal_year <- 2021
   terra::writeRaster(focal_year_stack_name_terra, focal_year_stack_name, overwrite = TRUE)
   #opening_cones_stack_terra <- terra::rast(focal_year_stack_name)
@@ -1813,8 +1813,8 @@ for(j in 1:length(prcp_file_list)){
 
 ### extract sac opening time series from raster with prcp ###############################
 library(terra)
-nab_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NAB/NAB_tx_coords.csv")
-lb_station_coords_raw <- read_csv("C:/Users/dsk856/Box/texas/NASA_project/landon_coordinates.csv")
+nab_station_coords_raw <- read_csv("C:/Users/danka/Box/texas/NAB/NAB_tx_coords.csv")
+lb_station_coords_raw <- read_csv("C:/Users/danka/Box/texas/NASA_project/landon_coordinates.csv")
 all_station_coords <- bind_rows(nab_station_coords_raw, lb_station_coords_raw)
 
 #nab_station_coords <- st_as_sf(nab_station_coords_raw, coords = c("long","lat"))
@@ -1847,14 +1847,14 @@ raster_extract_fun <- function(focal_raster){
   return(NAB_opening_export)
 } #end extraction fun
 
-raster_list <- dir("C:/Users/dsk856/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/", full = TRUE)
+raster_list <- dir("C:/Users/danka/Box/texas/pheno/manual_obs_models/sac_opening_prcp_jan_dec_stacks/", full = TRUE)
 pheno_preds_NAB <- purrr::map_dfr(raster_list, raster_extract_fun)
 
 pheno_preds_NAB %>% filter(!is.na(rel_opening)) %>%
   ggplot(aes(x = day_experiment, y = rel_opening, color = env_year)) + geom_line() + theme_bw() +
   facet_wrap(~NAB_station, scales = "free_y")
 
-write_csv(pheno_preds_NAB, "C:/Users/dsk856/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_dec_prcp_25km.csv")
+write_csv(pheno_preds_NAB, "C:/Users/danka/Box/texas/pheno/manual_obs_models/NAB_opening_preds_jan_dec_prcp_25km.csv")
 
 ### compare sac opening time series with NAB time series with prcp #########################
 # done in script: ripening_vs_airborne_p.R
@@ -1932,7 +1932,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # 
 # 
 # ### making an empirical function for pollen release as a function of time difference from modeled site mean ~ ssm spring 2020
-# p_2021 <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+# p_2021 <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
 # c_site_2021_join <- yr2_env %>% dplyr::select(site_name, site_mean_d = d_ssm)
 # p_2021 <- left_join(p_2021, c_site_2021_join) %>% 
 #   mutate(site_mean_date = site_mean_d + mdy("12-10-2020"),
@@ -1974,26 +1974,26 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 #   xlab( "difference from modeled site mean (days)") + ylab("pollen released during observation (proportion of observations)")+
 #   coord_cartesian(xlim = c(-25, 40) )
 # 
-# #write_csv(cones_d_empir, "C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_ssm_pred_site_mean_day_210913.csv")
+# #write_csv(cones_d_empir, "C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_ssm_pred_site_mean_day_210913.csv")
 # 
 # 
 # library(tmap)
 # library(magick)
 # 
 # #load in the Ja abundance map
-# ja_ba_orig <- raster("C:/Users/dsk856/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+# ja_ba_orig <- raster("C:/Users/danka/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
 # ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring)
 # plot(ja_ba); plot(tx_boundary, add = TRUE, col = NA)
 # ja_ba_rel <- ja_ba/98.40555  #max(ja_ba$Ashe_juniper_basal_area_3km)
 # ja_ba_pres <- ja_ba
 # ja_ba_pres[ja_ba_pres > 0] <- 1 #plot(ja_ba_pres)
 # 
-# ssm_2020_spring <- raster::raster("C:/Users/dsk856/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
+# ssm_2020_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/SMAP_ssm_TX_2020_spring.tif")
 # par(mfrow = c(1,1))
 # plot(ssm_2020_spring) #par(mfrow=c(1,1))
 # 
 # #check that this box includes all of TX
-# # tx_boundary <- sf::read_sf("C:/Users/dsk856/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+# # tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 # # plot(tx_boundary, add = TRUE, col = NA)
 # 
 # #using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
@@ -2003,7 +2003,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # plot(ssm_2020_peak_d)
 # 
 # #empirical function of pollen release
-# #cones_d_empir <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv") 
+# #cones_d_empir <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/empirical_cone_sac_function_from_site_mean_day_210909.csv") 
 # cones_d_empir2 <- cones_d_empir %>% mutate(days_from_site_mean_low = site_mean_dif - 0.5,
 #                                            days_from_site_mean_hi = site_mean_dif + 0.5) %>% 
 #   dplyr::select(days_from_site_mean_low, days_from_site_mean_hi, bag_cones_opening_mean_m)
@@ -2028,7 +2028,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 #   #save each frame as a png
 #   date_title <- paste("opening cones on:\n", focal_day_date,"\n ") #convert Julian to date
 #   
-#   png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/",
+#   png(filename=paste("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/",
 #                      "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
 #   
 #   print(
@@ -2057,12 +2057,12 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # 
 # 
 # #creating an animation
-# list.files(path = "C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/", 
+# list.files(path = "C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/", 
 #            pattern = "*.png", full.names = T) %>%
 #   purrr::map(image_read) %>% # reads each path file
 #   image_join() %>% # joins image
 #   image_animate(fps=1) %>% # animates, can opt for number of loops
-#   image_write("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/cone_opening_fs2021_v3.gif") 
+#   image_write("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_smspred_210913/cone_opening_fs2021_v3.gif") 
 # 
 
 
@@ -2070,7 +2070,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 
 
 # ### loading in surface soil moisture (ssm) ########################################
-# susm_raw <- read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/GEE_SMAP_SUSM_2019_2021_download_210419.csv")
+# susm_raw <- read_csv("C:/Users/danka/Box/texas/pheno/met_data/GEE_SMAP_SUSM_2019_2021_download_210419.csv")
 # 
 # susm <- 
 #   susm_raw %>% 
@@ -2116,8 +2116,8 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # # unique(test$site)
 # # unique(fs2020_2021_coords$site)
 # # ?pivot_wider
-# # fs2020_2021_coords <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv")
-# # tree_mean_day_sf <- st_read("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_gompertz_210416.shp")
+# # fs2020_2021_coords <- readr::read_csv("C:/Users/danka/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv")
+# # tree_mean_day_sf <- st_read("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_gompertz_210416.shp")
 
 
 # ### download and extract met data from Daymet and PRISM ###############################################################
@@ -2127,13 +2127,13 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # 
 # 
 # #DAYMET ISNT A GOOD CHOICE BECAUSE YOU CANT DOWNLOAD CURRENT YEAR
-# # write_csv(manual_obs_coords, "C:/Users/dsk856/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv")
-# # weather_at_stations <- download_daymet_batch(file_location = "C:/Users/dsk856/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv",
+# # write_csv(manual_obs_coords, "C:/Users/danka/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv")
+# # weather_at_stations <- download_daymet_batch(file_location = "C:/Users/danka/Box/texas/pheno/met_data/fs20_21_coords_daymetr210406.csv",
 # #                                              start =2018, end = 2021, simplify = TRUE)
-# # write_csv(weather_at_stations, "C:/Users/dsk856/Box/texas/pheno/met_data/weather_at_sites_2018_2020_210406.csv")
+# # write_csv(weather_at_stations, "C:/Users/danka/Box/texas/pheno/met_data/weather_at_sites_2018_2020_210406.csv")
 # # unique(weather_at_stations$measurement)
 # # weather_at_stations <-
-# #   read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/weather_at_sites_2018_2020_210203.csv") %>%
+# #   read_csv("C:/Users/danka/Box/texas/pheno/met_data/weather_at_sites_2018_2020_210203.csv") %>%
 # #   mutate(date = as.Date(paste(year, yday, sep = "-"), "%Y-%j")) %>%
 # #   mutate(measurement = gsub(pattern = ".", replacement = "", x = measurement, fixed = TRUE)) %>%
 # #   dplyr::select(site = site, date, measurement, value) %>%
@@ -2145,7 +2145,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 # 
 # 
 # weather_at_stations <- 
-#   readr::read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/prism_ppt_fs20_21_2019_2021.csv") %>% 
+#   readr::read_csv("C:/Users/danka/Box/texas/pheno/met_data/prism_ppt_fs20_21_2019_2021.csv") %>% 
 #   mutate(date = ymd(date)) %>%
 #   #mutate(measurement = gsub(pattern = ".", replacement = "", x = data, fixed = TRUE)) %>%
 #   dplyr::select(site = site, date, measurement = metvar, value = data) %>% 
@@ -2155,7 +2155,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 #   pivot_wider(id_cols = c(site, date), names_from = measurement, values_from = value, names_prefix = "met_")
 # 
 # weather_at_stations_tmean <- 
-#   readr::read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/prism_tmean_fs20_21_2019_2021.csv") %>% 
+#   readr::read_csv("C:/Users/danka/Box/texas/pheno/met_data/prism_tmean_fs20_21_2019_2021.csv") %>% 
 #   mutate(date = ymd(date)) %>%
 #   #mutate(measurement = gsub(pattern = ".", replacement = "", x = data, fixed = TRUE)) %>%
 #   dplyr::select(site = site, date, measurement = metvar, value = data) %>% 
@@ -2165,7 +2165,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 #   pivot_wider(id_cols = c(site, date), names_from = measurement, values_from = value, names_prefix = "met_")
 # 
 # weather_at_stations_vpdmin <- 
-#   readr::read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/prism_fs20_21_vpdmin_2019_2021.csv") %>% 
+#   readr::read_csv("C:/Users/danka/Box/texas/pheno/met_data/prism_fs20_21_vpdmin_2019_2021.csv") %>% 
 #   mutate(date = ymd(date)) %>%
 #   #mutate(measurement = gsub(pattern = ".", replacement = "", x = data, fixed = TRUE)) %>%
 #   dplyr::select(site = site, date, measurement = metvar, value = data) %>% 
@@ -2175,7 +2175,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 #   pivot_wider(id_cols = c(site, date), names_from = measurement, values_from = value, names_prefix = "met_")
 # 
 # weather_at_stations_vpdmax <- 
-#   readr::read_csv("C:/Users/dsk856/Box/texas/pheno/met_data/prism_fs20_21_vpdmax_2019_2021.csv") %>% 
+#   readr::read_csv("C:/Users/danka/Box/texas/pheno/met_data/prism_fs20_21_vpdmax_2019_2021.csv") %>% 
 #   mutate(date = ymd(date)) %>%
 #   #mutate(measurement = gsub(pattern = ".", replacement = "", x = data, fixed = TRUE)) %>%
 #   dplyr::select(site = site, date, measurement = metvar, value = data) %>% 
@@ -2402,7 +2402,7 @@ write.table(corr_matrix_2020_mo, "clipboard", sep="\t", row.names=FALSE)
 
 
 # #
-# png(filename=paste("C:/Users/dsk856/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/",
+# png(filename=paste("C:/Users/danka/Box/texas/pheno/manual_obs/animations/cones_opening_1920_smspred_211015/",
 #                    "TX_opening_", i,".png", sep = ""), width = 1200, height = 800, units = "px")
 # 
 # print(
