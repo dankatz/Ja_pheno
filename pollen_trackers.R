@@ -228,7 +228,7 @@ summary(fit)
 
 ### mid-season download for 2021-2022 #########################################################
 npn_direct_raw <- npn_download_status_data( #a saved version from october 2021 is available
-  request_source = 'Daniel Katz, UT Austin',
+  request_source = 'Daniel Katz, Cornell',
   species_ids = 43, #Juniperus ashei
   years = c(as.character(2021:2022)), #years to include
   phenophase_ids = c(495, 503) #angiosperms: 501 == "Open flowers", 502 == "Pollen release (flowers)" #conifers: 495 ==  503 ==
@@ -269,8 +269,26 @@ npn_direct_site_n <- npn_direct %>%
   group_by(site_id, individual_id) %>%
   summarize(n_obs_tree = n())
 
+#number of sites
+length(unique(npn_direct$site_id))
+
+#number of observations
+npn_direct %>% 
+  filter(phenophase_description == "Open pollen cones (conifers)") %>%
+  group_by(site_id, individual_id, observation_id) %>% 
+  summarize(n = n())
+
+
+
+
+npn_direct_site_n <- npn_direct %>%
+  group_by(site_id, individual_id) %>%
+  summarize(n_obs_tree = n())
+
+
 npn_direct <- left_join(npn_direct, npn_direct_site_n)
 
+#
 length(unique(npn_direct$individual_id))
 
 # visualize pollen cones opening data
