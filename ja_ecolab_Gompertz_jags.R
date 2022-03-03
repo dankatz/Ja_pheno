@@ -966,7 +966,7 @@ p <- readr::read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/pheno_fs20_21_da
 day_start <- mdy("12-10-2020")
 
 core_site_list <- c("chumlea", "comal", "hays", "hurst", "jewell", "puccetti",  
-                    "sablatura", "shepperd", "wade", "rogers", "menard") #
+                    "sablatura", "shepperd", "wade") # "rogers" , "menard"
 
 p_all_sites <- p %>%
   mutate(prop_open = bag_mean,#perc_open/100,
@@ -1113,7 +1113,6 @@ data_for_model_snap <- p_snap_sites %>%
   dplyr::select(day_experiment, date3, prop_open, site_n_snap, site_name, tree_n_snap) %>% 
   arrange(tree_n_snap, site_n_snap, day_experiment) 
 
-#CURRENT ISSUE: THE VARIANCE ON SITE MEANS IS TOO CONSTRAINED
 
 sink("model_b.txt")
 cat("  
@@ -1129,40 +1128,41 @@ model{
   } #end obs loop
   } #end tree loop
 
-#snapshot trees loop
-  for(tree_snap in 1:n_trees_snap){
-    Y_hat_snap[tree_snap] <- 1  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap] - b_snap[tree_snap])))
-    Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap)
-  } #end tree loop
+# #snapshot trees loop
+#   for(tree_snap in 1:n_trees_snap){
+#     Y_hat_snap[tree_snap] <- 1  * exp( -exp(-rate_global_mean_snap * (t_snap[tree_snap] - b_snap[tree_snap])))
+#     Y_snap[tree_snap] ~ dnorm(Y_hat_snap[tree_snap], LAMBDA1_snap)
+#   } #end tree loop
 
-  
   
 #Priors
 for(tree in 1:n_trees_core){
-  a[tree] ~ dunif(0.95, 1) #assuming that some trees may asymptote before 1
+  a[tree] ~ dunif(0.97, 1) #assuming that some trees may asymptote before 1
   
-  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core[site_vector_core[tree]]) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
- 
+  b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core) #trying lambda3 as global
+  #b[tree] ~ dnorm(site_halfway_point_core[site_vector_core[tree]], LAMBDA3_core[site_vector_core[tree]]) #shifting left and right- When b = log(2), f(0) = a/2, also called the halfway point
+   
   c[tree] ~ dnorm(rate_global_mean, rate_global_sigma) #the steepness of the curve
 } #end priors core trees loop
 
 
-for(tree in 1:n_trees_snap){
-  b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #shifting left and right-
-} #end priors snap tree loop
+# for(tree in 1:n_trees_snap){
+#   b_snap[tree] ~ dnorm(site_halfway_point_snap[site_n_snap[tree]], LAMBDA3_snap) #shifting left and right-
+# } #end priors snap tree loop
 
 
 for(site in 1:n_sites_core){
    site_halfway_point_core[site] ~ dnorm(0, 0.001)
-   LAMBDA3_core[site] ~ dgamma(0.01,0.01) #uninformative gamma prior
+ #  LAMBDA3_core[site] ~ dgamma(0.01,0.01) #uninformative gamma prior
 } #end priors site loop
 
-for(site in 1:n_sites_snap){
-   site_halfway_point_snap[site] ~ dnorm(0, 0.001)
-} #end priors site loop
+# for(site in 1:n_sites_snap){
+#    site_halfway_point_snap[site] ~ dnorm(0, 0.001)
+# } #end priors site loop
 
-LAMBDA1 ~ dgamma(0.01,0.01) #uninformative gamma prior
-LAMBDA1_snap <- 7.3 #using the value from the core trees
+LAMBDA3_core ~ dgamma(0.01,0.01)
+LAMBDA1 <- 500 #~ dgamma(0.01,0.01) #uninformative gamma prior
+LAMBDA1_snap <- 500 #using the value from the core trees
 
 
 LAMBDA3_snap <- 0.049 #using the value from the core trees
@@ -1170,7 +1170,7 @@ LAMBDA3_snap <- 0.049 #using the value from the core trees
 rate_global_mean ~ dnorm(0, 0.001)
 rate_global_sigma ~ dgamma(0.01,0.01)
 
-rate_global_mean_snap <- rate_global_mean
+# rate_global_mean_snap <- rate_global_mean #0.237
 
 #simulation for each tree core
   for(tree in 1:n_trees_core){
@@ -1179,12 +1179,12 @@ rate_global_mean_snap <- rate_global_mean
     }
   }
 
-#simulation for each tree snap
-  for(tree in 1:n_trees_snap){
-    for(i in 1:max_t){
-      Y_hat_sim_snap[tree, i] <- 1  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
-    }
-  }
+# #simulation for each tree snap
+#   for(tree in 1:n_trees_snap){
+#     for(i in 1:max_t){
+#       Y_hat_sim_snap[tree, i] <- 1  * exp( -exp(-rate_global_mean_snap * (t_sim[i] - b_snap[tree])))
+#     }
+#   }
 
 
 # #Site level simulations - not operational after changing LAMBDA3 to global level
@@ -1232,18 +1232,23 @@ jags <- jags.model('model_b.txt',
 #dic <- dic.samples(jags, n.iter = 1000, type = "pD"); print(dic) #model DIC
 #Sys.time()
 update(jags,n.iter=5000) 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_snap"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_core"),  n.iter = 1000, thin = 3) #variables to monitor
 plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
+results_param
 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("LAMBDA3_core"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params <- coda.samples(jags, variable.names=c("c"),  n.iter = 3000, thin = 3) #variables to monitor
 plot(mcmc_samples_params)
 summary(mcmc_samples_params)
 
 
+mcmc_samples_params <- coda.samples(jags, variable.names=c("rate_global_mean"),  n.iter = 1000, thin = 3) #variables to monitor
+plot(mcmc_samples_params)
+summary(mcmc_samples_params)
+
 
 #simulation for each tree core
-mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params2 <- coda.samples(jags, variable.names=c("Y_hat_sim"),  n.iter = 3000, thin = 3) #variables to monitor
 #plot(mcmc_samples_params2)
 
 results_param2 <- summary(mcmc_samples_params2)
