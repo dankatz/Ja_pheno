@@ -1262,7 +1262,7 @@ plot(mcmc_samples_params)
 results_param <- summary(mcmc_samples_params)
 results_param
 
-mcmc_samples_params <- coda.samples(jags, variable.names=c("b"),  n.iter = 1000, thin = 3) #variables to monitor
+mcmc_samples_params <- coda.samples(jags, variable.names=c("c"),  n.iter = 1000, thin = 3) #variables to monitor
 plot(mcmc_samples_params)
 summary(mcmc_samples_params)
 
@@ -1386,28 +1386,32 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 ## export site means data
 readr::write_csv(site_export_df, "C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_sacs_220304.csv")
 
-#Within sites, the standard deviation of tree midpoints around the site mean was 
+#Within core sites, the standard deviation of tree midpoints around the site mean was:
 site_export_df_join_core <- site_export_df %>% dplyr::select(site_n_core, site_name, Mean, SD, x_site, y_site) %>% 
   filter(!is.na(site_n_core)) %>% 
   rename(site_mean = Mean, site_sd = SD)
-tree_site_indiv_midpoints_core <- left_join(tree_midpoints_core, site_export_df_join_core)
+tree_site_indiv_midpoints_core <- left_join(tree_midpoints_core, site_export_df_join_core) %>% 
+  mutate(dif_indiv_site = site_mean - day_experiment) #%>% ggplot(aes(x = dif_indiv_site)) + geom_histogram()
 
-#PICK UP HERE: need to separate out the trees which were observed with a decent amount open, not trees that were either unstarted or finished
-p_core_sites_join <- p_core_sites %>% dplyr::select(site_name, tree_n_core, day_experiment, perc_open, pollen_rel)
-tree_site_indiv_midpoints_core2 <- left_join(tree_site_indiv_midpoints_core, p_core_sites_join)
+sd(na.omit(tree_site_indiv_midpoints_core$dif_indiv_site))
+ggplot(tree_site_indiv_midpoints_core, aes(x = site_name, y = dif_indiv_site)) + geom_boxplot() + geom_jitter()
 
-
+#Within snap sites, the standard deviation of tree midpoints around the site mean was:
 site_export_df_join_snap <- site_export_df %>% dplyr::select(site_n_snap, site_name, Mean, SD, x_site, y_site) %>% 
   filter(!is.na(site_n_snap)) %>% 
-  rename(site_mean = Mean, site_sd = SD) %>% filter(site_name != "rogers_visit3")
-tree_site_indiv_midpoints_snap <- left_join(tree_midpoints_snap, site_export_df_join_snap)
+  rename(site_mean = Mean, site_sd = SD) %>% filter(site_name != "rogers_visit3") %>% 
+  filter(site_sd < 5) #remove sites where there was too little information to tell much
+tree_site_indiv_midpoints_snap <- left_join(site_export_df_join_snap, tree_midpoints_snap) %>% 
+  mutate(dif_indiv_site = site_mean - day_experiment) #%>% ggplot(aes(x = dif_indiv_site)) + geom_histogram()
 
-tree_site_indiv_midpoints <- bind_rows(tree_site_indiv_midpoints_core, tree_site_indiv_midpoints_snap) %>% 
-  mutate(dif_indiv_site = site_mean - day_experiment)
+sd(na.omit(tree_site_indiv_midpoints_snap$dif_indiv_site))
+ggplot(tree_site_indiv_midpoints_snap, aes(x = site_name, y = dif_indiv_site)) + geom_boxplot() + geom_jitter()
+
+#across both snap and core sites,the standard deviation of tree midpoints around the site mean was:
+tree_site_indiv_midpoints <- bind_rows(tree_site_indiv_midpoints_core, tree_site_indiv_midpoints_snap)
 
 ggplot(tree_site_indiv_midpoints, aes(y = dif_indiv_site)) + theme_bw() +
   geom_histogram() #geom_boxplot() + geom_jitter() + 
-
 ggplot(tree_site_indiv_midpoints, aes(y = SD)) + theme_bw() + geom_histogram() #geom_boxplot() + geom_jitter() + 
 
 tree_site_indiv_midpoints %>% 
@@ -1465,8 +1469,8 @@ idealized_sac_opening_curve <- left_join(yhat_join, tree_b_join) %>%
   mutate(sac_opening_day = case_when(sac_opening_day < 0 ~ 0, TRUE ~ sac_opening_day))
   
 ggplot(idealized_sac_opening_curve, aes(x = day_before_peak, y = sac_opening_day)) + geom_point() + theme_bw()
-#write_csv(idealized_sac_opening_curve, "C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
-idealized_sac_opening_curve <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210910.csv")
+#readr::write_csv(idealized_sac_opening_curve, "C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_220307.csv")
+#idealized_sac_opening_curve <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/idealized_sac_opening_curve_210307.csv")
 
 
 
@@ -1801,7 +1805,7 @@ for(site in 1:n_sites_snap){
 }#end model
     ",fill=TRUE)
 sink() 
-sink() 
+
 
 jags <- jags.model('model_b.txt', 
                    data = list(
@@ -1977,6 +1981,45 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 readr::write_csv(site_export_df, "C:/Users/danka/Box/texas/pheno/fs20_21_site_halfway_cones_210904.csv")
 
 
+#Within core sites, the standard deviation of tree midpoints around the site mean was:
+site_export_df_join_core <- site_export_df %>% dplyr::select(site_n_core, site_name, Mean, SD, x_site, y_site) %>% 
+  filter(!is.na(site_n_core)) %>% 
+  rename(site_mean = Mean, site_sd = SD)
+tree_site_indiv_midpoints_core <- left_join(tree_midpoints_core, site_export_df_join_core) %>% 
+  mutate(dif_indiv_site = site_mean - day_experiment) #%>% ggplot(aes(x = dif_indiv_site)) + geom_histogram()
+
+sd(na.omit(tree_site_indiv_midpoints_core$dif_indiv_site))
+ggplot(tree_site_indiv_midpoints_core, aes(x = site_name, y = dif_indiv_site)) + geom_boxplot() + geom_jitter()
+
+#Within snap sites, the standard deviation of tree midpoints around the site mean was:
+site_export_df_join_snap <- site_export_df %>% dplyr::select(site_n_snap, site_name, Mean, SD, x_site, y_site) %>% 
+  filter(!is.na(site_n_snap)) %>% 
+  rename(site_mean = Mean, site_sd = SD) %>% filter(site_name != "rogers_visit3") %>% 
+  filter(site_sd < 5) #remove sites where there was too little information to tell much
+tree_site_indiv_midpoints_snap <- left_join(site_export_df_join_snap, tree_midpoints_snap) %>% 
+  mutate(dif_indiv_site = site_mean - day_experiment) #%>% ggplot(aes(x = dif_indiv_site)) + geom_histogram()
+
+sd(na.omit(tree_site_indiv_midpoints_snap$dif_indiv_site))
+ggplot(tree_site_indiv_midpoints_snap, aes(x = site_name, y = dif_indiv_site)) + geom_boxplot() + geom_jitter()
+
+#across both snap and core sites,the standard deviation of tree midpoints around the site mean was:
+tree_site_indiv_midpoints <- bind_rows(tree_site_indiv_midpoints_core, tree_site_indiv_midpoints_snap)
+
+ggplot(tree_site_indiv_midpoints, aes(y = dif_indiv_site)) + theme_bw() +
+  geom_histogram() #geom_boxplot() + geom_jitter() + 
+ggplot(tree_site_indiv_midpoints, aes(y = SD)) + theme_bw() + geom_histogram() #geom_boxplot() + geom_jitter() + 
+
+tree_site_indiv_midpoints %>% 
+  group_by(site_name, x_site, y_site) %>% 
+  summarize(dif_site_mean = mean(dif_indiv_site),
+            dif_site_sd = sd(dif_indiv_site)) %>% 
+  ggplot(aes(x = x_site, y = y_site, color = log(dif_site_sd))) + geom_point() + theme_bw() + scale_color_viridis_c()
+
+sd(na.omit(tree_site_indiv_midpoints$dif_indiv_site))
+
+#SD for the example sites in Fig 2
+  tree_site_indiv_midpoints %>% filter(site_n_core == 7) %>% group_by(site_n_core) %>% summarize(dif_indiv_site_sd = sd(dif_indiv_site))
+  tree_site_indiv_midpoints %>% filter(site_n_snap == 7) %>% group_by(site_n_snap) %>% summarize(dif_indiv_site_sd = sd(dif_indiv_site))
 
 
 ######### save idealized opening trajectory across all core sites 
