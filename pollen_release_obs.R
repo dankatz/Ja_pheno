@@ -6,15 +6,20 @@ library(readr)
 library(forcats)
 library(slider)
 library(purrr)
+library(here)
+
+setwd("C:/Users/danka/Box")
+here::i_am("katz_photo.jpg")
+
 
 #load in the idealized cone opening curve (from 'ja_ecolab_Gompertz_jags.R')
-idealized_cone_opening_curve <- read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
+idealized_cone_opening_curve <- read_csv(here("texas", "pheno", "manual_obs", "idealized_cone_opening_curve_210910.csv"))
 
 #load in the observations
 day_start_1920 <- mdy("12-10-2019")
 day_start_2021 <- mdy("12-10-2020")
 day_start <- mdy("12-10-2020")
-p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") %>% 
+p <- read_csv(here("texas", "pheno", "manual_obs", "pheno_fs20_21_database_210402.csv")) %>% 
   mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
          sample_hours = hour(sample_datetime),
          sample_date = date(sample_datetime),
@@ -61,9 +66,11 @@ p <- p %>%
 #   mutate(day_from_peak = day_before_peak_v,
 #          sac_opening_day = sac_opening_day_v)
 
+ggplot(p, aes(x = sac_opening_day_v, y = pollen_rel)) + geom_boxplot() 
+
 ### adding in environmental data: daily ###########################################
 
-daily_files <- list.files(path='C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
+daily_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
                            full.names = TRUE)
 daily_files <- daily_files[!grepl("drought", daily_files)] #remove the drought files which have a different format
 #if(grepl("drought", daily_files[1]) == TRUE){hourly_files_names <- substr(daily_file_name, 82, 87)} #for drought files
@@ -162,12 +169,12 @@ summary(GRIDMET)
 #          )
 
 
-GRIDMET %>% 
-  filter()
-  ggplot(aes(x = ))
+# GRIDMET %>% 
+#   filter()
+#   ggplot(aes(x = ))
 
 ### adding in environmental data: hourly ###########################################
-hourly_files <- list.files(path='C:/Users/dsk856/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
+hourly_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
                            full.names = TRUE)
 
 hourly_read_fun <- function(hourly_files){
@@ -205,12 +212,17 @@ RTMA_2020b <- dplyr::select(RTMA_2020, site_name = site_name...1, focal_date = f
 
 RTMA <- bind_rows(RTMA_2019b, RTMA_2020b) %>% 
   rename(sample_datetime_rounded = focal_date,
-         TMP = TMP_)
+         GUST = UST_,
+         wind = ind_,
+         TCDC = CDC_,
+         TMP = MP_2,
+         PRES = RES_,
+         SPFH = PFH_)
 
 RTMA$sample_datetime_rounded
 summary(RTMA)
 
-filter(RTMA, sample_datetime_rounded > ymd_hms("2020-12-15 00:00:00") &
+RTMA %>% filter( sample_datetime_rounded > ymd_hms("2020-12-15 00:00:00") &
              sample_datetime_rounded < ymd_hms("2020-12-18 00:00:00")) %>% 
 ggplot(aes(x = sample_datetime_rounded, y = TMP, color = site_name)) + geom_line()+ theme_bw() + 
   theme(legend.position = "none")
@@ -275,14 +287,16 @@ p_sun <- getSunlightTimes(data = sun_df, keep = c("sunrise", "solarNoon"), tz = 
 ### data exploration #######################################################
 p2 <- p %>% mutate(pollen_lots = case_when(pollen_rel == "lots" ~ 1, TRUE ~ 0),
                   pollen_rel = fct_relevel(pollen_rel, "none", "little", "some","lots"),
-                  sample_datetime_rounded = round_date(sample_datetime, unit = "hour"))
+                  sample_datetime_rounded = round_date(sample_datetime, unit = "hour")) %>% 
+  mutate(sunrise = p_sun$sunrise, solarNoon = p_sun$solarNoon,
+         time_after_sunrise = round(as.numeric(time_length(sample_datetime - sunrise, unit = "hours")), 2),
+         time_after_noon =   round(as.numeric(time_length(sample_datetime - solarNoon, unit = "hours")), 2))   #in hours
+
+
+
 
 p2 <- left_join(p2, GRIDMET)
-p2 <- left_join(p2, RTMA2)
-p2 <- mutate(p2, sunrise = p_sun$sunrise, solarNoon = p_sun$solarNoon,
-                 time_after_sunrise = round(as.numeric(time_length(sample_datetime - sunrise, unit = "hours")), 2),
-                 time_after_noon =   round(as.numeric(time_length(sample_datetime - solarNoon, unit = "hours")), 2))   #in hours
-    #select(sample_datetime, sunrise, solarNoon, time_after_sunrise, time_after_noon)
+p2 <- left_join(p2, (RTMA2))
 
 p2 %>% group_by(pollen_rel) %>% 
   summarize(sac_opening_mean = mean(sac_opening_day)) %>% 
@@ -293,6 +307,7 @@ ggplot(aes(x = pollen_rel, y = sac_opening_mean)) + geom_bar(stat = "identity") 
 p2 %>% group_by(sample_hours) %>% 
   summarize(pollen_lots_mean = mean(pollen_lots),
             n = n()) %>% 
+  filter(sample_hours > 8 & sample_hours < 19) %>% 
   ggplot(aes(x = sample_hours, y = pollen_lots_mean * 100)) + geom_bar(stat = "identity") + theme_bw() +
   geom_text(aes(x = sample_hours, y = -2, label = n))+
   xlab("time of day (hour)") + ylab("observations with high pollen release (%)")
@@ -353,7 +368,7 @@ p2 %>% #group_by(sample_hours) %>%
 
 p2 %>% #group_by(sample_hours) %>% 
   ggplot(aes(x = PRES_dif, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
-  xlab("pressure (x)") + ylab("observations with high pollen release (%)") +
+  xlab("change in pressure (Pa)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
@@ -367,18 +382,26 @@ p2 %>% #group_by(sample_hours) %>%
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = TMP, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
-  xlab("temperature (C)") + ylab("observations with high pollen release (%)") +
+  ggplot(aes(x = TMP_dif, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  xlab("change in temperature (C)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 
 summary(p2)
 fit <- glm(pollen_lots ~ sac_opening_day + sample_hours + time_after_noon + # vpd 
-             pr + rmi + th + vpd + vs +
+             #pr + rmi + th + vpd + vs +
              wind_mean_12hr + PRES_dif +  TMP_mean_24hr, # + TCDC_mean_3hr, #TCDC + SPFH: no effect
             
              data = p2, family = "binomial")
 summary(fit)
+
+hist(p2$day_from_peak, breaks = 200)
+
+
+fit <- glm(pollen_lots ~  PRES_dif, # + TCDC_mean_3hr, #TCDC + SPFH: no effect
+           data = p2, family = "binomial")
+summary(fit)
+
 
 
 
@@ -402,7 +425,7 @@ data_for_model <- left_join(GRIDMET, p3) #summary(data_for_model)
 
 
 ## set up dlnm crossbasis object for use in glm
-max_lag <- 1
+max_lag <- 5
 vpd_lag <- crossbasis(data_for_model$vpd, lag = max_lag, 
                       #argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
                       argvar=list(fun = "lin"), #"poly", degree = 3), #shape of response curve
@@ -431,14 +454,15 @@ vs_lag <- crossbasis(data_for_model$vs, lag = max_lag,
 model1 <- glm(pollen_lots ~  #number of cases at a station on an observed day
                 #sac_opening_day + 
                 prop_open + 
-                # vpd_lag + 
+                 vpd_lag + 
                 # #rmax_lag + 
                 # tmmx_lag +
                 #ns(time_after_noon, df = 3) + 
                 #vpd + 
-                time_after_sunrise * vpd + 
+                time_after_sunrise +
+                vpd + 
                 #rmax + 
-                time_after_sunrise * tmmx +
+                 tmmx +
                 #vpd*tmmx + 
                 srad_lag +  vs_lag, 
               
