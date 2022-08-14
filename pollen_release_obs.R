@@ -267,9 +267,9 @@ RTMA2 <- bind_cols(RTMA, RTMA_mean_3hr, RTMA_mean_6hr, RTMA_mean_12hr, RTMA_mean
 
 
 filter(RTMA2, sample_datetime_rounded > ymd_hms("2020-12-15 00:00:00") &
-         sample_datetime_rounded < ymd_hms("2021-02-22 00:00:00")) %>% 
-  ggplot(aes(x = sample_datetime_rounded, y = wind_dif, color = site_name)) + geom_line()+ theme_bw() + 
-  theme(legend.position = "none")
+         sample_datetime_rounded < ymd_hms("2021-01-15 00:00:00")) %>% 
+  ggplot(aes(x = sample_datetime_rounded, y = TMP_mean_3hr, color = site_name)) + geom_line()+ theme_bw() + 
+  theme(legend.position = "none") + xlab("date") + ylab("temperature (C)")
 
 # GGally::ggcorr(RTMA_mean_24hr[1:6], label = TRUE)
 
