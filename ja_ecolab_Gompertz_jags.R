@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2) 
+library(readr)
 #rm(list=ls())
 
 # ### an example with a toy dataset ##############################################
@@ -1327,13 +1328,27 @@ ggplot()  + theme_bw() +
   facet_wrap(~site_n_snap) + xlab("day of experiment") + ylab("cones open (proportion)") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-
 tree_midpoints_snap <- tree_sim_snap %>% distinct() %>% 
   group_by(tree_n_snap, site_n_snap) %>% 
   filter(abs(Mean - 0.5) == min(abs(Mean - 0.5)))
 
 
+#save Y_hat for each snap tree for use in other analyses
+tree_sim_snap
+tree_sim_core
+p_all_sites$tree_n
+p_core_sites
+p_snap_s
 
+
+p_core_sites_Y_sim <- dplyr::select(tree_sim_core, Y_hat_mean = Mean, Y_hat_sd = SD, day_experiment, tree_n_core, site_n_core) %>% distinct() %>% 
+  left_join(., p_core_sites)
+
+p_snap_sites_Y_sim <- dplyr::select(tree_sim_snap, Y_hat_mean = Mean, Y_hat_sd = SD, day_experiment, tree_n_snap, site_n_snap) %>% distinct() %>% 
+  left_join(., p_snap_sites)
+
+write_csv( p_core_sites_Y_sim, "C:/Users/danka/Box/texas/pheno/p_core_sites_Y_sim_220926.csv")
+write_csv( p_snap_sites_Y_sim, "C:/Users/danka/Box/texas/pheno/p_snap_sites_Y_sim_220926.csv")
 
 ### extract site means for each site: core
 mcmc_samples_params <- coda.samples(jags, variable.names=c("site_halfway_point_core"),  n.iter = 5000, thin = 3) 
@@ -2036,7 +2051,7 @@ tree_b_join <- tree_b %>%
                 tree_n_core)
 tree_b_save <- left_join(tree_b_join, p_core_sites_tree_key) 
 #write_csv(tree_b_save, "C:/Users/danka/Box/texas/pheno/manual_obs/modeled_cone_peak_day_param_b_210910.csv")
-
+#tree_b_save <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/modeled_cone_peak_day_param_b_210910.csv")
 
 
 #get Y_hat for each core tree on each day
@@ -2072,5 +2087,5 @@ idealized_cone_opening_curve <- left_join(yhat_join, tree_b_join) %>%
 ggplot(idealized_cone_opening_curve, aes(x = day_before_peak, y = cone_opening_day * 100)) + geom_point() + theme_bw() +
   xlab("day from peak") + ylab("cones opening on day (%)")
 #write_csv(idealized_cone_opening_curve, "C:/Users/danka/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
-
+idealized_cone_opening_curve <- read_csv("C:/Users/danka/Box/texas/pheno/manual_obs/idealized_cone_opening_curve_210910.csv")
 
