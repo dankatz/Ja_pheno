@@ -8,16 +8,41 @@ library(slider)
 library(purrr)
 library(here)
 
-setwd("C:/Users/danka/Box")
+setwd("C:/Users/dsk273/Box")
 here::i_am("katz_photo.jpg")
 
+day_start_1920 <- mdy("12-10-2019")
+day_start_2021 <- mdy("12-10-2020")
+
+
+### load in the observations (which now include a filled out date x tree grid and predicted sac open on focal day)#########################
+p_core <- read_csv(here("texas", "pheno",  "p_core_sites_Y_sim_220926.csv")) %>% 
+  mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
+         sample_hours = hour(sample_datetime),
+         sample_date = date(sample_datetime),
+         prop_open = perc_open/100) # %>%  filter(!is.na(pollen_rel))
+
+p_snap <- read_csv(here("texas", "pheno",  "p_snap_sites_Y_sim_220926.csv")) %>% 
+  mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
+         sample_hours = hour(sample_datetime),
+         sample_date = date(sample_datetime),
+         prop_open = perc_open/100) # %>%  filter(!is.na(pollen_rel))
+
+p <- bind_rows(p_core, p_snap) %>% 
+  mutate(y_hat_release_mean = (lead(Y_hat_mean) - lag(Y_hat_mean))/2,
+         y_hat_release_mean = case_when(y_hat_release_mean < 0 ~ 0, TRUE ~ y_hat_release_mean),
+         tree_id2 = paste0(site_n_core, site_n_snap, tree_n_core, tree_n_snap),
+         date4 = day_experiment + day_start_2021)
+
+ggplot(p, aes(x = date4, y = y_hat_release_mean, group = tree_id2)) + geom_point() + geom_line() + facet_wrap(~site_n_core) + theme_bw()
+
+############################################
 
 #load in the idealized cone opening curve (from 'ja_ecolab_Gompertz_jags.R')
 idealized_cone_opening_curve <- read_csv(here("texas", "pheno", "manual_obs", "idealized_cone_opening_curve_210910.csv"))
 
 #load in the observations
-day_start_1920 <- mdy("12-10-2019")
-day_start_2021 <- mdy("12-10-2020")
+
 day_start <- mdy("12-10-2020")
 p <- read_csv(here("texas", "pheno", "manual_obs", "pheno_fs20_21_database_210402.csv")) %>% 
   mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
@@ -70,7 +95,7 @@ ggplot(p, aes(x = sac_opening_day_v, y = pollen_rel)) + geom_boxplot()
 
 ### adding in environmental data: daily ###########################################
 
-daily_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
+daily_files <- list.files(path='C:/Users/dsk273/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
                            full.names = TRUE)
 daily_files <- daily_files[!grepl("drought", daily_files)] #remove the drought files which have a different format
 #if(grepl("drought", daily_files[1]) == TRUE){hourly_files_names <- substr(daily_file_name, 82, 87)} #for drought files
@@ -174,7 +199,7 @@ summary(GRIDMET)
 #   ggplot(aes(x = ))
 
 ### adding in environmental data: hourly ###########################################
-hourly_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
+hourly_files <- list.files(path='C:/Users/dsk273/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
                            full.names = TRUE)
 
 hourly_read_fun <- function(hourly_files){
@@ -212,12 +237,13 @@ RTMA_2020b <- dplyr::select(RTMA_2020, site_name = site_name...1, focal_date = f
 
 RTMA <- bind_rows(RTMA_2019b, RTMA_2020b) %>% 
   rename(sample_datetime_rounded = focal_date,
-         GUST = UST_,
-         wind = ind_,
-         TCDC = CDC_,
-         TMP = MP_2,
-         PRES = RES_,
-         SPFH = PFH_)
+         TMP = TMP_)
+         # GUST = UST_,
+         # wind = ind_,
+         # TCDC = CDC_,
+         # TMP = MP_2,
+         # PRES = RES_,
+         # SPFH = PFH_)
 
 RTMA$sample_datetime_rounded
 summary(RTMA)
