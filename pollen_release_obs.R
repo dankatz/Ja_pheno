@@ -8,7 +8,8 @@ library(slider)
 library(purrr)
 library(here)
 
-setwd("C:/Users/dsk273/Box")
+#setwd("C:/Users/dsk273/Box")
+setwd("C:/Users/danka/Box")
 here::i_am("katz_photo.jpg")
 
 day_start_1920 <- mdy("12-10-2019")
@@ -34,55 +35,40 @@ p <- bind_rows(p_core, p_snap) %>%
          tree_id2 = paste0(site_n_core, site_n_snap, tree_n_core, tree_n_snap),
          date4 = day_experiment + day_start_2021)
 
-ggplot(p, aes(x = date4, y = y_hat_release_mean, group = tree_id2)) + geom_point() + geom_line() + facet_wrap(~site_n_core) + theme_bw()
-
-############################################
-
-#load in the idealized cone opening curve (from 'ja_ecolab_Gompertz_jags.R')
-idealized_cone_opening_curve <- read_csv(here("texas", "pheno", "manual_obs", "idealized_cone_opening_curve_210910.csv"))
-
-#load in the observations
-
-day_start <- mdy("12-10-2020")
-p <- read_csv(here("texas", "pheno", "manual_obs", "pheno_fs20_21_database_210402.csv")) %>% 
-  mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
-         sample_hours = hour(sample_datetime),
-         sample_date = date(sample_datetime),
-         prop_open = perc_open/100) %>% 
-  filter(!is.na(pollen_rel))
-  # dplyr::select(site_name, sample_datetime, date, x, y, bag_mean, perc_open) %>% 
-  # mutate(prop_open = perc_open/100,
-  #        date3 = sample_date,
-  #        site = site_name, #paste(round(x, 1), round(y, 1)),
-  #        doy = yday(date3),
-  #        tree = paste(round(x, 5), round(y, 5)))
+ggplot(p, aes(x = date4, y = y_hat_release_mean, group = tree_id2)) + geom_point() + geom_line() + facet_wrap(~site_n_snap) + theme_bw()
+ggplot(p, aes(x = y_hat_release_mean, y = pollen_rel)) + geom_boxplot() 
 
 
-#use the idealized cone curve look-up table to estimate where each tree is in its curve
-day_before_peak_v <- rep(x = NA, times = nrow(p))
-sac_opening_day_v <- rep(x = NA, times = nrow(p))
-  
-for(i in 1:nrow(p)){
-  perc_open_i <- p$prop_open[i]
-  row_i <- which(abs(idealized_cone_opening_curve$yhat_median - perc_open_i) == 
-             min(abs(idealized_cone_opening_curve$yhat_median - perc_open_i)))
-  day_before_peak_v[i] <- idealized_cone_opening_curve$day_before_peak[row_i]
-  sac_opening_day_v[i] <- idealized_cone_opening_curve$sac_opening_day[row_i]
-}
-
-p <- p %>% 
-  mutate(day_from_peak = day_before_peak_v,
-         sac_opening_day = sac_opening_day_v)
-
-# SHOULD WORK MORE ON THE SAC MODEL, BECAUSE THAT IDEALIZED SAC CURVE IS SUSPECT
-# #use the idealized sac curve look-up table to estimate where each tree is in its curve
+# ############################################
+# 
+# #load in the idealized cone opening curve (from 'ja_ecolab_Gompertz_jags.R')
+# idealized_cone_opening_curve <- read_csv(here("texas", "pheno", "manual_obs", "idealized_cone_opening_curve_210910.csv"))
+# 
+# #load in the observations
+# 
+# day_start <- mdy("12-10-2020")
+# p <- read_csv(here("texas", "pheno", "manual_obs", "pheno_fs20_21_database_210402.csv")) %>% 
+#   mutate(sample_datetime = ymd_hms(sample_datetime, tz = "US/Central"),
+#          sample_hours = hour(sample_datetime),
+#          sample_date = date(sample_datetime),
+#          prop_open = perc_open/100) %>% 
+#   filter(!is.na(pollen_rel))
+#   # dplyr::select(site_name, sample_datetime, date, x, y, bag_mean, perc_open) %>% 
+#   # mutate(prop_open = perc_open/100,
+#   #        date3 = sample_date,
+#   #        site = site_name, #paste(round(x, 1), round(y, 1)),
+#   #        doy = yday(date3),
+#   #        tree = paste(round(x, 5), round(y, 5)))
+# 
+# 
+# #use the idealized cone curve look-up table to estimate where each tree is in its curve
 # day_before_peak_v <- rep(x = NA, times = nrow(p))
 # sac_opening_day_v <- rep(x = NA, times = nrow(p))
-# 
+#   
 # for(i in 1:nrow(p)){
-#   perc_open_i <- round(p$bag_mean, 3)[i]
+#   perc_open_i <- p$prop_open[i]
 #   row_i <- which(abs(idealized_cone_opening_curve$yhat_median - perc_open_i) == 
-#                    min(abs(idealized_cone_opening_curve$yhat_median - perc_open_i)))
+#              min(abs(idealized_cone_opening_curve$yhat_median - perc_open_i)))
 #   day_before_peak_v[i] <- idealized_cone_opening_curve$day_before_peak[row_i]
 #   sac_opening_day_v[i] <- idealized_cone_opening_curve$sac_opening_day[row_i]
 # }
@@ -90,8 +76,25 @@ p <- p %>%
 # p <- p %>% 
 #   mutate(day_from_peak = day_before_peak_v,
 #          sac_opening_day = sac_opening_day_v)
-
-ggplot(p, aes(x = sac_opening_day_v, y = pollen_rel)) + geom_boxplot() 
+# 
+# # SHOULD WORK MORE ON THE SAC MODEL, BECAUSE THAT IDEALIZED SAC CURVE IS SUSPECT
+# # #use the idealized sac curve look-up table to estimate where each tree is in its curve
+# # day_before_peak_v <- rep(x = NA, times = nrow(p))
+# # sac_opening_day_v <- rep(x = NA, times = nrow(p))
+# # 
+# # for(i in 1:nrow(p)){
+# #   perc_open_i <- round(p$bag_mean, 3)[i]
+# #   row_i <- which(abs(idealized_cone_opening_curve$yhat_median - perc_open_i) == 
+# #                    min(abs(idealized_cone_opening_curve$yhat_median - perc_open_i)))
+# #   day_before_peak_v[i] <- idealized_cone_opening_curve$day_before_peak[row_i]
+# #   sac_opening_day_v[i] <- idealized_cone_opening_curve$sac_opening_day[row_i]
+# # }
+# # 
+# # p <- p %>% 
+# #   mutate(day_from_peak = day_before_peak_v,
+# #          sac_opening_day = sac_opening_day_v)
+# 
+# ggplot(p, aes(x = sac_opening_day_v, y = pollen_rel)) + geom_boxplot() 
 
 ### adding in environmental data: daily ###########################################
 
