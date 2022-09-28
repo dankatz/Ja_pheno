@@ -8,8 +8,8 @@ library(slider)
 library(purrr)
 library(here)
 
-#setwd("C:/Users/dsk273/Box")
-setwd("C:/Users/danka/Box")
+setwd("C:/Users/dsk273/Box")
+#setwd("C:/Users/danka/Box")
 here::i_am("katz_photo.jpg")
 
 day_start_1920 <- mdy("12-10-2019")
@@ -34,6 +34,13 @@ p <- bind_rows(p_core, p_snap) %>%
          y_hat_release_mean = case_when(y_hat_release_mean < 0 ~ 0, TRUE ~ y_hat_release_mean),
          tree_id2 = paste0(site_n_core, site_n_snap, tree_n_core, tree_n_snap),
          date4 = day_experiment + day_start_2021)
+
+#filling in the variables that are not linked to time: tree coordinates
+tree_id_vars <- p %>% dplyr::select(tree_n_core, tree_n_snap, site_n_core, tree_n_snap, tree, site_name, site_type) %>% distinct() %>% filter(!is.na(tree) ) %>% 
+              rename(tree_id3 = tree, site_name2 = site_name, site_type2 = site_type)
+
+p <- left_join(p, tree_id_vars) %>% filter(!is.na(tree_id3)) %>% 
+      mutate(tree_xy = tree_id3, site_name = site_name2, site = site_name2, site_type = site_type2)
 
 ggplot(p, aes(x = date4, y = y_hat_release_mean, group = tree_id2)) + geom_point() + geom_line() + facet_wrap(~site_n_snap) + theme_bw()
 ggplot(p, aes(x = y_hat_release_mean, y = pollen_rel)) + geom_boxplot() 
@@ -130,6 +137,8 @@ GRIDMET <- purrr::map_dfc(daily_files, daily_read_fun)
 GRIDMET <- dplyr::select(GRIDMET, site_name = site_name...1, sample_date = sample_date...2, !contains("..."))
 
 
+daily_files
+
 summary(GRIDMET)
 filter(GRIDMET, sample_date > ymd_hms("2020-12-15 00:00:00") &
                 sample_date < ymd_hms("2021-02-22 00:00:00")) %>% 
@@ -144,9 +153,9 @@ GRIDMET <- mutate(GRIDMET, sample_date = date(sample_date)) #summary(GRIDMET2)
 
 #changing site names to play nice with p3
 GRIDMET <- mutate(GRIDMET, site_name = tolower(site_name)) #
-unique(GRIDMET$site_name) %in% unique(p3$site_name)
+unique(GRIDMET$site_name) %in% unique(p$site_name)
 sort(unique(GRIDMET$site_name))
-sort(unique(p3$site_name))
+sort(unique(p$site_name))
 
 #interpolating missing values (with a maximum gap of 3 days)
 summary(GRIDMET) 
@@ -328,7 +337,7 @@ p2 <- left_join(p2, GRIDMET)
 p2 <- left_join(p2, (RTMA2))
 
 p2 %>% group_by(pollen_rel) %>% 
-  summarize(sac_opening_mean = mean(sac_opening_day)) %>% 
+  summarize(sac_opening_mean = mean(y_hat_release_mean)) %>% 
 ggplot(aes(x = pollen_rel, y = sac_opening_mean)) + geom_bar(stat = "identity") + theme_bw() +
   xlab("pollen release category") + ylab("sacs opening that day (proportion)")
 
@@ -347,7 +356,7 @@ binomial_smooth <- function(...) {
 
 ### by solar 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = time_after_sunrise, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
+  ggplot(aes(x = time_after_sunrise, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
   xlab("time after sunrise (hr)") + ylab("observations with high pollen release (%)") +
   scale_color_viridis_c(name = "sacs opening that day (%)") + geom_smooth(method = "loess")
 
@@ -359,72 +368,72 @@ p2 %>% arrange(time_after_noon) %>%  #group_by(sample_hours) %>%
 
 ### by GRIDMET vars
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = pr_mean_7day, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
+  ggplot(aes(x = pr_mean_7day, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
   xlab("precipitation (mm)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = vpd, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
+  ggplot(aes(x = vpd, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
   xlab("vapor pressure deficit (kPa)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = rmax, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
+  ggplot(aes(x = rmax, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
   xlab("minimum relative humidity (%)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = th, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
+  ggplot(aes(x = th, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
   xlab("wind direction") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 #by vs
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = vs, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  ggplot(aes(x = vs, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
   xlab("wind speed (m/s)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 ### by RTMA vars
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = wind_dif, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
+  ggplot(aes(x = wind_dif, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .1) + theme_bw() +
   xlab("wind speed (m/s)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = GUST_mean_3hr, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  ggplot(aes(x = GUST_mean_3hr, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
   xlab("gust wind speed (m/s)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = PRES_dif, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  ggplot(aes(x = PRES_dif, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
   xlab("change in pressure (Pa)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = SPFH, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
+  ggplot(aes(x = SPFH, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .001) + theme_bw() +
   xlab("specific humidity (kg/kg)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = TCDC_mean_3hr, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  ggplot(aes(x = TCDC_mean_3hr, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
   xlab("total cloud cover (%)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 p2 %>% #group_by(sample_hours) %>% 
-  ggplot(aes(x = TMP_dif, y = pollen_lots, col = sac_opening_day * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
+  ggplot(aes(x = TMP_dif, y = pollen_lots, col = y_hat_release_mean * 100)) + geom_jitter(height = 0.05, width = .5) + theme_bw() +
   xlab("change in temperature (C)") + ylab("observations with high pollen release (%)") +
   binomial_smooth(se = FALSE) + scale_color_viridis_c(name = "sacs opening that day (%)")
 
 
 summary(p2)
-fit <- glm(pollen_lots ~ sac_opening_day + sample_hours + time_after_noon + # vpd 
+fit <- glm(pollen_lots ~ y_hat_release_mean + sample_hours + time_after_noon + # vpd 
              #pr + rmi + th + vpd + vs +
              wind_mean_12hr + PRES_dif +  TMP_mean_24hr, # + TCDC_mean_3hr, #TCDC + SPFH: no effect
             
              data = p2, family = "binomial")
 summary(fit)
 
-hist(p2$day_from_peak, breaks = 200)
+hist(p2$y_hat_release_mean, breaks = 200)
 
 
 fit <- glm(pollen_lots ~  PRES_dif, # + TCDC_mean_3hr, #TCDC + SPFH: no effect
@@ -440,61 +449,77 @@ library(splines)
 library(MASS)
 
 #make a dataframe that has all of the environmental data
-p3 <- p %>% mutate(pollen_lots = case_when(pollen_rel == "lots" ~ 1, TRUE ~ 0),
+p3 <- p %>% mutate(pollen_lots = case_when(pollen_rel == "lots" ~ 1, 
+                                           pollen_rel == "some" ~ 0, 
+                                           pollen_rel == "little" ~ 0, 
+                                           pollen_rel == "none" ~ 0, 
+                                           is.na(pollen_rel) ~ as.numeric(NA)), #need to maintain consistency in output type for case_when
                    pollen_rel = fct_relevel(pollen_rel, "none", "little", "some","lots"),
                    sample_datetime_rounded = round_date(sample_datetime, unit = "hour")) %>% 
-      dplyr::select(site_name, sample_date, sample_datetime, x, y, prop_open, day_from_peak, sac_opening_day, pollen_lots, 
-                    sample_datetime_rounded)
+      dplyr::select(site_type, site_name, sample_date = date4, sample_datetime, tree_xy, prop_open, y_hat_release_mean, pollen_lots, 
+                    sample_datetime_rounded) 
 p3 <- mutate(p3, sunrise = p_sun$sunrise, solarNoon = p_sun$solarNoon,
              time_after_sunrise = round(as.numeric(time_length(sample_datetime - sunrise, unit = "hours")), 2),
              time_after_noon =   round(as.numeric(time_length(sample_datetime - solarNoon, unit = "hours")), 2))   #in hours
 
 
-data_for_model <- left_join(GRIDMET, p3) #summary(data_for_model)
+
+tree_list <- dplyr::select(p3, site_name, tree_xy) %>% distinct()
+
+GRIDMET_tree <- filter(GRIDMET, sample_date > ymd("2020-11-01") & sample_date < ymd("2021-03-01")) %>% 
+                    full_join(., tree_list) %>% 
+                    arrange(site_name, tree_xy, sample_date)
+
+data_for_model <- left_join(GRIDMET_tree, p3, by = c("sample_date", "tree_xy")) %>% 
+  filter(tree_xy != "NA NA")
 
 
 ## set up dlnm crossbasis object for use in glm
-max_lag <- 5
-vpd_lag <- crossbasis(data_for_model$vpd, lag = max_lag, 
+max_lag <- 14
+vpd_lag <- crossbasis(data_for_model$vpd, lag = 14, 
                       #argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
-                      argvar=list(fun = "lin"), #"poly", degree = 3), #shape of response curve
+                      argvar = list(fun = "lin"), #"poly", degree = 3), #shape of response curve
+                      arglag = list(fun = "ns")) #shape of lag
                       #arglag = list(fun = "integer")) #shape of lag 
                       #arglag = list(fun = "poly", degree = 1)) #shape of lag
-                      arglag = list(fun = "lin")) #shape of lag
+                      #arglag = list(fun = "lin")) #shape of lag
 
-srad_lag <- crossbasis(data_for_model$srad, lag = max_lag, 
-                      argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+srad_lag <- crossbasis(data_for_model$srad, lag = 14, 
+                      argvar = list(fun = "ns"), #"poly", degree = 3), #shape of response curve
                       arglag = list(fun = "ns")) #shape of lag
 
-rmax_lag <- crossbasis(data_for_model$rmax, lag = max_lag, 
-                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+rmax_lag <- crossbasis(data_for_model$rmax, lag = 13, 
+                       argvar = list(fun = "ns"), #"poly", degree = 3), #shape of response curve
                        arglag = list(fun = "ns")) #shape of lag
 
-tmmx_lag <- crossbasis(data_for_model$tmmx, lag = max_lag, 
-                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+tmmx_lag <- crossbasis(data_for_model$tmmx, lag = 15, 
+                       argvar = list(fun = "ns"), #"poly", degree = 3), #shape of response curve
                        arglag = list(fun = "ns")) #shape of lag
 
-vs_lag <- crossbasis(data_for_model$vs, lag = max_lag, 
-                       argvar=list(fun = "ns"), #"poly", degree = 3), #shape of response curve
+vs_lag <- crossbasis(data_for_model$vs, lag =20, 
+                       argvar = list(fun = "ns"), #"poly", degree = 3), #shape of response curve
                        arglag = list(fun = "ns")) #shape of lag
 
 
 #binomial glm with included variables
 model1 <- glm(pollen_lots ~  #number of cases at a station on an observed day
-                #sac_opening_day + 
-                prop_open + 
-                 vpd_lag + 
-                # #rmax_lag + 
-                # tmmx_lag +
-                #ns(time_after_noon, df = 3) + 
-                #vpd + 
-                time_after_sunrise +
-                vpd + 
-                #rmax + 
-                 tmmx +
-                #vpd*tmmx + 
-                srad_lag +  vs_lag, 
-              
+                y_hat_release_mean + 
+                #prop_open + 
+                
+                vpd_lag +
+                vpd +
+                srad_lag +
+                srad +
+                rmax_lag +
+                rmax +
+                tmmx_lag +
+                tmmx +
+                vs_lag,
+                #vs +
+                
+                
+               # ns(time_after_noon, df = 3) ,
+              #  ns(time_after_sunrise, df = 3), 
                 
               family = "binomial", 
               #link = "logit", #(link = "logit")(link="logit"),
@@ -503,148 +528,96 @@ model1 <- glm(pollen_lots ~  #number of cases at a station on an observed day
 model1
 summary(model1) #str(model1)
 
-### visualize effects of env vars: srad
-pred1_srad <- crosspred(srad_lag,  model1, #at = 1,
-                       at = seq(from = min(data_for_model$srad, na.rm = TRUE), to = max(data_for_model$srad, na.rm = TRUE), by = 0.10), 
-                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
-
-srad_RR <- 
-  data.frame(srad = pred1_srad$predvar, 
-             mean = pred1_srad$allRRfit,
-             lower = pred1_srad$allRRlow,
-             upper = pred1_srad$allRRhigh) %>% 
-  ggplot(aes(x = srad, y = mean, ymin = lower, ymax = upper))+
-  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
-  xlab(expression(paste("srad (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
-  annotation_logticks(sides = "b")  
-
-#if I want to include the rug, I need to remove the non-observation points first
-#srad_RR <- srad_RR + geom_rug(data = data_for_model, aes(x = srad), sides = "t", alpha = 0.1, inherit.aes = FALSE)
-
-srad_lag_RR <-
-  as.data.frame(exp(pred1_srad$cumfit)) %>% mutate(srad = pred1_srad$predvar) %>% 
-  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
-  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
-  ggplot(aes(x = srad, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
-  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
-
-cowplot::plot_grid(srad_RR, srad_lag_RR)
-
 
 ### visualize effects of vpd
 pred1_vpd <- crosspred(vpd_lag,  model1, #at = 1,
                        at = seq(from = min(data_for_model$vpd, na.rm = TRUE), to = max(data_for_model$vpd, na.rm = TRUE), by = 0.10), 
                        bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
 
-vpd_RR <- 
-  data.frame(vpd = pred1_vpd$predvar, 
-             mean = pred1_vpd$allRRfit,
-             lower = pred1_vpd$allRRlow,
-             upper = pred1_vpd$allRRhigh) %>% 
-  ggplot(aes(x = vpd, y = mean, ymin = lower, ymax = upper))+
-  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
-  xlab(expression(paste("vpd (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
-  annotation_logticks(sides = "b")  
-
-#if I want to include the rug, I need to remove the non-observation points first
-#vpd_RR <- vpd_RR + geom_rug(data = data_for_model, aes(x = vpd), sides = "t", alpha = 0.1, inherit.aes = FALSE)
-
 vpd_lag_RR <-
-  as.data.frame(exp(pred1_vpd$cumfit)) %>% mutate(vpd = pred1_vpd$predvar) %>% 
+  as.data.frame(pred1_vpd$cumfit) %>% mutate(vpd = pred1_vpd$predvar) %>% 
   pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
   mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
   ggplot(aes(x = vpd, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
   scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+vpd_lag_RR
 
-cowplot::plot_grid(vpd_RR, vpd_lag_RR)
+
+### visualize effects of env vars: srad
+pred1_srad <- crosspred(srad_lag,  model1, #at = 1,
+                       at = seq(from = min(data_for_model$srad, na.rm = TRUE), to = max(data_for_model$srad, na.rm = TRUE), by = 0.10), 
+                       bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
+
+srad_lag_RR <-
+  as.data.frame(pred1_srad$cumfit) %>% mutate(srad = pred1_srad$predvar) %>% 
+  pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
+  mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
+  ggplot(aes(x = srad, y = lag, z = RR)) + geom_contour_filled(bins = 5) + theme_bw() +
+  scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
+srad_lag_RR
+
 
 ### visualize effects of rmax
 pred1_rmax <- crosspred(rmax_lag,  model1, #at = 1,
                        at = seq(from = min(data_for_model$rmax, na.rm = TRUE), to = max(data_for_model$rmax, na.rm = TRUE), by = 0.10), 
                        bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
 
-rmax_RR <- 
-  data.frame(rmax = pred1_rmax$predvar, 
-             mean = pred1_rmax$allRRfit,
-             lower = pred1_rmax$allRRlow,
-             upper = pred1_rmax$allRRhigh) %>% 
-  ggplot(aes(x = rmax, y = mean, ymin = lower, ymax = upper))+
-  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
-  xlab(expression(paste("rmax (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
-  annotation_logticks(sides = "b")  
-
-#if I want to include the rug, I need to remove the non-observation points first
-#rmax_RR <- rmax_RR + geom_rug(data = data_for_model, aes(x = rmax), sides = "t", alpha = 0.1, inherit.aes = FALSE)
-
 rmax_lag_RR <-
-  as.data.frame(exp(pred1_rmax$cumfit)) %>% mutate(rmax = pred1_rmax$predvar) %>% 
+  as.data.frame(pred1_rmax$cumfit) %>% mutate(rmax = pred1_rmax$predvar) %>% 
   pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
   mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
   ggplot(aes(x = rmax, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
   scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
-
-cowplot::plot_grid(rmax_RR, rmax_lag_RR)
+rmax_lag_RR
 
 ### visualize effects of tmmx
 pred1_tmmx <- crosspred(tmmx_lag,  model1, #at = 1,
                        at = seq(from = min(data_for_model$tmmx, na.rm = TRUE), to = max(data_for_model$tmmx, na.rm = TRUE), by = 0.10), 
                        bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
 
-tmmx_RR <- 
-  data.frame(tmmx = pred1_tmmx$predvar, 
-             mean = pred1_tmmx$allRRfit,
-             lower = pred1_tmmx$allRRlow,
-             upper = pred1_tmmx$allRRhigh) %>% 
-  ggplot(aes(x = tmmx, y = mean, ymin = lower, ymax = upper))+
-  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
-  xlab(expression(paste("tmmx (x / x"^"3",")")))+ ylab('RR')+theme_bw() +
-  annotation_logticks(sides = "b")  
-
-#if I want to include the rug, I need to remove the non-observation points first
-#tmmx_RR <- tmmx_RR + geom_rug(data = data_for_model, aes(x = tmmx), sides = "t", alpha = 0.1, inherit.aes = FALSE)
-
 tmmx_lag_RR <-
-  as.data.frame(exp(pred1_tmmx$cumfit)) %>% mutate(tmmx = pred1_tmmx$predvar) %>% 
+  as.data.frame(pred1_tmmx$cumfit) %>% mutate(tmmx = pred1_tmmx$predvar) %>% 
   pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
   mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
   ggplot(aes(x = tmmx, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
   scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
 
-cowplot::plot_grid(tmmx_RR, tmmx_lag_RR)
+tmmx_lag_RR
 
 ### visualize effects of vs
 pred1_vs <- crosspred(vs_lag,  model1, #at = 1,
                        at = seq(from = min(data_for_model$vs, na.rm = TRUE), to = max(data_for_model$vs, na.rm = TRUE), by = 0.10), 
                        bylag = 1, cen = 0, cumul = TRUE) #str(pred1_cup)
 
-vs_RR <- 
-  data.frame(vs = pred1_vs$predvar, 
-             mean = pred1_vs$allRRfit,
-             lower = pred1_vs$allRRlow,
-             upper = pred1_vs$allRRhigh) %>% 
-  ggplot(aes(x = vs, y = mean, ymin = lower, ymax = upper))+
-  geom_ribbon(alpha=0.1)+ geom_line()+ geom_hline(lty=2, yintercept = 1)+ # horizontal reference line at no change in odds
-  xlab(expression(paste("vs (x / x"^"3",")")))+ ylab('RR')+theme_bw() 
-
-#if I want to include the rug, I need to remove the non-observation points first
-#vs_RR <- vs_RR + geom_rug(data = data_for_model, aes(x = vs), sides = "t", alpha = 0.1, inherit.aes = FALSE)
-
 vs_lag_RR <-
-  as.data.frame(exp(pred1_vs$cumfit)) %>% mutate(vs = pred1_vs$predvar) %>% 
+  as.data.frame(pred1_vs$cumfit) %>% mutate(vs = pred1_vs$predvar) %>% 
   pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
   mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
   ggplot(aes(x = vs, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
   scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
-
-cowplot::plot_grid(vs_RR, vs_lag_RR)
-
+vs_lag_RR
 
 
+### exploring predictions #######################
+data_for_model_results <- data_for_model %>% 
+  mutate(pollen_lots_pred = predict(object = model1, data_for_model, type = "response"))
+
+#test <- predict(object = model1, data_for_model, type = "response")
+hist(model1$fitted.values, n = 100)
+hist(data_for_model_results$pollen_lots_pred, n = 100)
+
+data_for_model_results %>% 
+  filter(site_name.x == "wade" ) %>% 
+ggplot(aes(x = sample_date, y = pollen_lots_pred, group = tree_xy)) + geom_line(alpha = 0.2) + theme_bw() +
+  scale_x_date(limits = c(mdy("12-1-2020"), mdy("2-1-2021")))
+                                     
+
+pROC::auc(data_for_model_results$pollen_lots, data_for_model_results$pollen_lots_pred)
+pROC::plot.roc(data_for_model_results$pollen_lots, data_for_model_results$pollen_lots_pred)
+#creating predictions as if time was noon
 
 
-
-
-
+?predict
 
 
 # # include the 1-day lagged residual in the model
