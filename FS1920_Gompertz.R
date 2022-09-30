@@ -179,7 +179,7 @@ pheno_sf %>% st_drop_geometry() %>%
   write_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv")
 
 ### some data exploration #############################################################################
-p <- readr::read_csv("C:/Users/dsk856/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+p <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
 
 
 #time series for each site
@@ -608,3 +608,28 @@ ggplot(tx_boundary) +   geom_sf(data = tx_boundary, colour = "black", fill = NA)
 
 ## export site means data
 readr::write_csv(site_export_df, "C:/Users/dsk856/Box/texas/pheno/fs19_20_site_halfway_cones_210910.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### exporting each tree coordinate and date for Yiluan
+
+p <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+trees_2019_2020 <- p %>% dplyr::select(sample_date = dates, x, y)
+
+p <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+trees_2020_2021 <- p %>% dplyr::select(sample_date, x, y)
+
+trees_dates_coords <- bind_rows(trees_2019_2020, trees_2020_2021) %>% distinct()
+write_csv(trees_dates_coords, here("texas", "pheno",  "tree_dates_coords_220930.csv"))
+
