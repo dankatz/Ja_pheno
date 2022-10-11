@@ -538,7 +538,7 @@ vpd_lag_RR <-
   as.data.frame(pred1_vpd$cumfit) %>% mutate(vpd = pred1_vpd$predvar) %>% 
   pivot_longer(., cols = contains("lag"), names_to = "lag", values_to = "RR") %>% 
   mutate(lag = as.numeric(gsub(pattern = "lag", replacement = "", x = lag))) %>% 
-  ggplot(aes(x = vpd, y = lag, z = RR)) + geom_contour_filled(bins = 100) + theme_bw() +
+  ggplot(aes(x = vpd, y = lag, z = RR)) + geom_contour_filled(bins = 10) + theme_bw() +
   scale_fill_viridis_d(option = "plasma", direction = -1, name = "RR")    #automatically bins and turns to factor
 vpd_lag_RR
 

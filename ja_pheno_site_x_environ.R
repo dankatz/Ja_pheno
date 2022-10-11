@@ -1378,21 +1378,29 @@ env_ssm <-
 library(tmap)
 library(magick)
 
-tx_boundary <- sf::read_sf("C:/Users/danka/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
+tx_boundary <- sf::read_sf("C:/Users/dsk273/Box/texas/statewide_abundance/Texas_State_Boundary/Texas_State_Boundary.shp")
 
 #LOAD IN SSM
-ssm_2020_spring <- raster::raster("C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
+ssm_2020_spring <- raster::raster("C:/Users/dsk273/Box/texas/pheno/met_data/GEE_pheno_tx_downloads/SMAP_ssm_TX_2020_april.tif")
 par(mfrow = c(1,1))
 plot(ssm_2020_spring) #par(mfrow=c(1,1))
 
 #load in the Ja abundance map
-ja_ba_orig <- raster("C:/Users/danka/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+ja_ba_orig <- raster("C:/Users/dsk273/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
 ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring)
 plot(ja_ba); plot(tx_boundary, add = TRUE, col = NA)
+  
+plot(ja_ba * -1, col = heat.colors(100)); plot(tx_boundary, add = TRUE, col = NA, lwd = 3)
+
 ja_ba_rel <- ja_ba/98.40555  #max(ja_ba$Ashe_juniper_basal_area_3km)
 ja_ba_pres <- ja_ba
 ja_ba_pres[ja_ba_pres > 0] <- 1 #plot(ja_ba_pres)
 
+# # for a figure for HZ
+# ja_ba_orig <- raster("C:/Users/dsk273/Box/texas/statewide_abundance/USFS_TreeSpeciesMetrics/Ashe_juniper_basal_area_3km.tif")
+# ssm_2020_spring_hires <- disaggregate(ssm_2020_spring, fact=4)
+# ja_ba <- projectRaster(from = ja_ba_orig, to = ssm_2020_spring_hires)
+# plot(ja_ba * -1, col = heat.colors(20)); plot(tx_boundary, add = TRUE, col = NA, lwd = 3)
 
 
 #using the best fit of soil moisture in spring 2020 to predict time of maximum pollen release in 2020
