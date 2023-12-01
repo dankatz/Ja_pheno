@@ -23,19 +23,50 @@ wade23 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/Jan 2023 fieldwork/Wa
 #load planetscope data from Yiluan
 ps <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/juniper_planet_indices_from_yiluan231129.csv")
 
-# ### exporting each tree coordinate and date for Yiluan
-# 
-# p1920 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv") 
+# original script used to export  tree coordinates and date for Yiluan
+# p1920 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv")
 # trees_2019_2020 <- p %>% dplyr::select(sample_date = dates, x, y)
 # 
-# p2021 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv") 
+# p2021 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv")
 # trees_2020_2021 <- p %>% dplyr::select(sample_date, x, y)
 # 
 # trees_dates_coords <- bind_rows(trees_2019_2020, trees_2020_2021) %>% distinct()
 # write_csv(trees_dates_coords, here("texas", "pheno",  "tree_dates_coords_220930.csv"))
-# 
 
-### compare male and female trees at wade #######################
+
+
+### male trees at wade #########################
+wade_x_min <- min(wade23$x)
+wade_x_max <- max(wade23$x)
+wade_y_min <- min(wade23$y)
+wade_y_max <- max(wade23$y)
+
+## adding in 20-21 field season trees
+p2021 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_fs20_21_database_210402.csv")
+
+p2021_wade <- p2021 %>% 
+  filter(x > wade_x_min & x < wade_x_max) %>% 
+  filter(y > wade_y_min & y < wade_y_max) %>% 
+  mutate(x_join = round(x, 5),
+         y_join = round(y, 5))
+
+ps_wade <- ps %>% 
+  filter(lon > wade_x_min & lon < wade_x_max) %>% 
+  filter(lat > wade_y_min & lat < wade_y_max) %>% 
+  mutate(x_join = round(lon, 5),
+         y_join = round(lat, 5)) %>% 
+  rename(ps_date = date) 
+
+
+ps_p2021_wade_male <- 
+  left_join(ps_wade, p2021_wade, multiple = "first") %>% 
+  filter(!is.na(GlobalID)) %>% 
+  mutate(xy = paste(x_join, y_join),
+       ps_date = mdy(ps_date))
+
+
+
+### female trees at wade from Jan 23 #######################
 wade_x_min <- min(wade23$x)
 wade_x_max <- max(wade23$x)
 wade_y_min <- min(wade23$y)
@@ -48,36 +79,130 @@ ps_wade <- ps %>%
          y_join = round(lat, 5))
 
 wade23_join <- wade23 %>% 
-  mutate(x_join = round(x, 5),
-         y_join = round(y, 5))
+  rename(id = GlobalID,
+         date2 = date)
+  # mutate(x_join = round(x, 5),
+  #        y_join = round(y, 5))
 
-ps_wade23 <- left_join(ps_wade, wade23_join) %>% 
-  mutate(xy = paste(x_join, y_join)) %>% 
+ps_wade23_female <- left_join(ps_wade, wade23_join) %>% 
+  mutate(xy = paste(x_join, y_join),
+         ps_date = mdy(date)) %>% 
   filter(!is.na(cone_density))
-
-unique(ps_wade23$xy)
-
-ggplot(wade23_join, aes(x = x_join, y = y_join, color = sex)) + geom_point() + theme_bw()
 
 ps_wade %>% 
   dplyr::select(x_join, y_join) %>% 
   distinct() %>% 
   ggplot(aes(x = x_join, y = y_join)) + geom_point(color = "black", size = 3, shape =3) + theme_bw() +
-  geom_point(data = wade23_join, aes(x = x_join, y = y_join, color = sex))
+  geom_point(data = wade23_join, aes(x = x, y = y, color = sex))
 
-### select trees at Wade ########################################
 
-#get male trees from Wade
+### male vs female trees at Wade ########################################
 
-#get female trees from wade
+#visualize Hannah's index over time using a moving average
+ps_wade23_female <- ps_wade23_female %>% 
+  mutate(hz_index = red + blue * 0.7)
+ps_p2021_wade_male %>% 
+  mutate(hz_index = red + blue * 0.7) %>% 
+  #filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
+  ggplot(aes(x = ps_date, y = hz_index, group = id)) + theme_bw() + 
+  geom_line(aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "orange") +
+  geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "green") +
+  # geom_point(data = ps_wade23_female, aes(x = ps_date, y = hz_index), color = "green") +
+  # geom_point(color = "orange", size = 2, alpha = 0.5) +
+  scale_x_date(date_breaks = "1 month", 
+               limits = as.Date(c('2019-12-01','2020-05-01')))
 
-#match up with PlanetScope data
 
-#add qualitative cone density for individual trees
 
-#visualize reflectivity over time using Hannah's index as a function of cone density
 
 #visualize reflectivity over time using yellowness as a function of cone density
+#male trees
+ps_p2021_wade_male %>% 
+#filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
+ggplot(aes(x = ps_date, y = yellow, group = id)) + #geom_point(alpha = 0.2) + geom_line(alpha = 0.2)  + facet_wrap(~id) +
+  geom_line(aes(y=zoo::rollmean(yellow, 14, na.pad=TRUE)), alpha = 0.2) + theme_bw()
 
-#visualize reflectivity as a function of cone density
+#female trees
+ps_wade23_female %>%
+  #filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
+  ggplot(aes(x = ps_date, y = yellow, group = id)) + #geom_point(alpha = 0.2) + geom_line(alpha = 0.2)  + facet_wrap(~id) +
+  geom_line(aes(y=zoo::rollmean(yellow, 14, na.pad=TRUE)), alpha = 0.2) + theme_bw()
 
+#male and female at the same time
+ps_p2021_wade_male %>% 
+  #filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
+  ggplot(aes(x = ps_date, y = yellow, group = id)) + theme_bw() + 
+  geom_point(color = "orange", size = 1.5) + 
+  geom_line(aes(y=zoo::rollmean(yellow, 7, na.pad=TRUE)), alpha = 0.6, color = "orange") + 
+  geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(yellow, 7, na.pad=TRUE)), alpha = 0.6, color = "green") +
+  geom_point(data = ps_wade23_female, aes(x = ps_date, y = yellow), color = "green") +
+  scale_x_date(date_breaks = "1 month", 
+               limits = as.Date(c('2020-12-01','2021-05-01')))
+
+
+
+
+#visualize time series from a couple of similar trees, including high cone males and similar structure females
+# a high cone tree
+ps_p2021_wade %>% 
+   # filter(y > 30.8260 & y < 30.8263) %>%
+   # filter(x > -98.061 & x < -98.0605) %>%
+   filter(id == "13f92cd5-7e56-429c-9998-1b65403b6bb6" | id == "1225") %>% 
+   #1225 is the big male tree in the open with intensive study 
+  #"13f92cd5-7e56-429c-9998-1b65403b6bb6" is a female tree with a similar structure nearby
+  
+  #filter(ps_date > ymd("2020-12-01") & ps_date <  ymd("2021-05-01")) %>% 
+  mutate(hz_index = red + blue * 0.7) %>% 
+  ggplot(aes(x = ps_date, y = hz_index, color = sex, group = id)) + geom_point(alpha = 0.2) + theme_bw() + 
+  geom_line() 
+
+
+
+#create a map of trees on a particular day
+ps_p2021_wade_male_join <- ps_p2021_wade_male %>% 
+  dplyr::select(id, ps_date, x = x_join, y = y_join, blue, green, red, nir, evi) %>% 
+  mutate(sex = "male")
+
+ps_p2021_wade_female_join <- ps_wade23_female %>% 
+  dplyr::select(id, ps_date, x, y, blue, green, red, nir, evi) %>% 
+  mutate(sex = "female")
+
+ps_p2021_wade <- bind_rows(ps_p2021_wade_male_join, ps_p2021_wade_female_join)
+
+ps_p2021_wade %>% 
+  filter(ps_date == ymd("2022-05-29"))  %>% 
+  mutate(hz_index = red + blue * 0.7) %>% 
+  ggplot(aes(x = x, y = y, color = hz_index, shape = sex)) + geom_point(size = 2) + theme_bw() +
+  scale_color_viridis_c()
+
+unique(ps_p2021_wade$ps_date)
+
+
+# a little map of ID numbers
+ps_p2021_wade %>% 
+  filter(ps_date == ymd("2022-05-29"))  %>% 
+  mutate(hz_index = red + blue * 0.7) %>% 
+  ggplot(aes(x = x, y = y, label = id)) + geom_text(alpha = 0.1) + theme_bw() +
+  scale_color_viridis_c()
+
+
+#differences between hz index for all male and female trees at wade over a window
+ps_p2021_wade %>% 
+  filter(ps_date > ymd("2020-12-01") & ps_date <  ymd("2021-05-01")) %>% 
+  mutate(hz_index = red + blue * 0.7) %>% 
+  ggplot(aes(x = ps_date, y = hz_index, color = sex, group = id)) + geom_point(alpha = 0.2) + theme_bw() + 
+  geom_line() 
+
+  #scale_x_date(date_breaks = "1 month", limits = as.Date(c('2020-12-01','2021-04-01')))
+
+#boxplots of hz index for all male and female trees over a defined time window  
+  ps_p2021_wade %>% 
+    #filter(ps_date > ymd("2020-12-01") & ps_date <  ymd("2021-02-01")) %>% 
+    filter(ps_date > ymd("2021-6-01") & ps_date <  ymd("2021-09-01")) %>% 
+    mutate(hz_index = red + blue * 0.7) %>% 
+    ggplot(aes(x = sex, y = hz_index, fill = sex)) + geom_jitter(alpha = 0.2) + theme_bw() + 
+    geom_boxplot() + facet_wrap(~ps_date) +
+    scale_fill_manual(values = c("green", "orange"))
+
+  
+  
