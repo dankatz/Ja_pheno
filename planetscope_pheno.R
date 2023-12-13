@@ -114,10 +114,10 @@ ps_p2021_wade_male %>%
   mutate(hz_index = red + blue * 0.7) %>% 
   #filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
   ggplot(aes(x = ps_date, y = hz_index, group = xy )) + theme_bw() + 
-  geom_line(aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "orange") +
-  geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "green") +
-  # geom_point(data = ps_wade23_female, aes(x = ps_date, y = hz_index), color = "green") +
-  # geom_point(color = "orange", size = 2, alpha = 0.5) +
+  # geom_line(aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "orange") +
+  # geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(hz_index, 7, na.pad=TRUE)), alpha = 0.6, color = "green") +
+  geom_point(data = ps_wade23_female, aes(x = ps_date, y = hz_index), color = "green") +
+  geom_point(color = "orange", size = 2, alpha = 0.5) +
   scale_x_date(date_breaks = "1 month", 
                limits = as.Date(c('2019-12-01','2020-05-01')))
 
@@ -141,12 +141,13 @@ ps_p2021_wade_male %>%
 ps_p2021_wade_male %>% 
   #filter(id == "04527a0c-d540-416c-a406-53421add280f") %>% 
   ggplot(aes(x = ps_date, y = yellow, group = xy)) + theme_bw() + 
-  geom_point(color = "orange", size = 1.5) + 
-  geom_line(aes(y=zoo::rollmean(yellow, 7, na.pad=TRUE)), alpha = 0.6, color = "orange") + 
-  geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(yellow, 7, na.pad=TRUE)), alpha = 0.6, color = "green") +
-  geom_point(data = ps_wade23_female, aes(x = ps_date, y = yellow), color = "green") +
-  scale_x_date(date_breaks = "1 month", 
-               limits = as.Date(c('2020-12-01','2021-05-01')))
+  #geom_point(color = "orange", size = 1.5) + 
+  geom_line(data = ps_wade23_female, aes(y=zoo::rollmean(yellow, 14, na.pad=TRUE)), alpha = 0.6, color = "green") +
+  geom_line(aes(y=zoo::rollmean(yellow, 14, na.pad=TRUE)), alpha = 0.6, color = "orange") + 
+  
+    #geom_point(data = ps_wade23_female, aes(x = ps_date, y = r2g), color = "green") +
+  scale_x_date(#date_breaks = "12 month", 
+               limits = as.Date(c('2016-12-01','2023-05-01')))
 
 
 
@@ -195,8 +196,8 @@ ps_p2021_wade %>%
 #boxplots of hz index for all male and female trees over a defined time window  
   ps_p2021_wade %>% 
     #filter(ps_date > ymd("2020-12-01") & ps_date <  ymd("2021-02-01")) %>% 
-    #filter(ps_date > ymd("2021-1-01") & ps_date <  ymd("2021-02-01")) %>% 
-    filter(ps_date > ymd("2021-5-01") & ps_date <  ymd("2021-6-01")) %>% 
+    filter(ps_date > ymd("2021-1-01") & ps_date <  ymd("2021-02-01")) %>% 
+ #   filter(ps_date > ymd("2021-5-01") & ps_date <  ymd("2021-6-01")) %>% 
     mutate(hz_index = red + blue * 0.7) %>% 
     ggplot(aes(x = sex, y = hz_index, fill = sex)) + geom_jitter(alpha = 0.2) + theme_bw() + 
     geom_boxplot() + facet_wrap(~ps_date) +
