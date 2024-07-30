@@ -20,11 +20,158 @@ library(lubridate)
 #load trees from wade jan 23
 wade23 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/Jan 2023 fieldwork/Wade_pheno_sex_obs_jan23_male_vs_female.csv")
 
-#load planetscope data from Yiluan
-ps <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/juniper_planet_indices_from_yiluan231129.csv") %>% 
-  mutate(lon = round(lon, 5),
-         lat = round(lat, 5)) #preventing some floating point errors later on
+# #load planetscope data from Yiluan
+# ps <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/juniper_planet_indices_from_yiluan231129.csv") %>% 
+#   mutate(lon = round(lon, 5),
+#          lat = round(lat, 5)) #preventing some floating point errors later on
 
+
+
+#load planetscope data from Yiluan 7/17/24
+ps <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/juniper_planet_indices_from_yiluan240717.csv") %>% 
+  mutate(date_p = mdy(date),
+         c_group = group,
+         lon = round(lon, 5),
+         lat = round(lat, 5), #preventing some floating point errors later on
+         hue = rgb2hsv(ps$red, ps$green, ps$blue, maxColorValue = 1)[1,],
+         sat = rgb2hsv(ps$red, ps$green, ps$blue, maxColorValue = 1)[2,],
+         val = rgb2hsv(ps$red, ps$green, ps$blue, maxColorValue = 1)[3,],
+         rgb_tot = red + green + blue) %>% 
+  mutate(rg_dif = (red - green)/(red + green),
+         rg_dif2 = (red + green)/(red + green + blue)) 
+
+#time series 
+ps %>% 
+  mutate(focal_index = rg_dif) %>% 
+  #filter(rgb_tot > 0.3  & rgb_tot < 1) %>% 
+  filter(c_group == "green") %>% 
+  #filter(id < 10) %>% 
+  filter(site == "Burnet") %>% 
+  filter(date_p > ymd("2022/11/01")) %>% 
+ # filter(c_group == "orange") %>% 
+  filter(rgb_tot > 0.1  & rgb_tot < 1) %>% 
+ggplot( aes(x = date_p, y = focal_index, color = c_group, group = id)) + #geom_point(alpha = 0.1) + 
+  theme_bw() +
+  geom_line(aes(y=zoo::rollmean(focal_index, 6, na.pad=TRUE)), alpha = 0.6) +
+  scale_color_manual(values = c( "green", "orange")) + facet_wrap(~site) +
+  geom_point(alpha = 0.91)
+
+
+
+
+
+#normalizing by green trees
+tree_date_band_means <- ps %>% 
+  filter(c_group == "green") %>% 
+  group_by(site, date ) %>% 
+  summarize(r_mean_fem = median(red),
+            g_mean_fem = median(green),
+            b_mean_fem = median(blue),
+            nir_mean_fem = median(nir))
+  
+#ps2 <- 
+left_join(ps, tree_date_band_means) %>%  
+  mutate(r_norm = red/r_mean_fem,
+         g_norm = green/g_mean_fem,
+         b_norm = blue/b_mean_fem,
+         nir_norm = nir/nir_mean_fem,
+         
+         focal_index = (red - green)/(red + green) 
+          # (red - green)/(red + green) - (r_mean_fem - g_mean_fem)/(r_mean_fem + g_mean_fem)
+         #(r_norm - g_norm)/(r_norm + g_norm) #(red - green)/(red + green) 
+         ) %>% 
+  #filter(rgb_tot > 0.3  & rgb_tot < 1) %>% 
+  #filter(c_group == "orange") %>% 
+  #filter(id < 10) %>% 
+  filter(red < 0.1 & green < 0.1 & nir < 0.3) %>% 
+  filter(site == "Burnet") %>% 
+  filter(id == 42 ) %>% 
+ # filter(date_p > ymd("2020/9/01") & date_p < ymd("2021/3/01")) %>% 
+  # filter(c_group == "orange") %>% 
+  filter(rgb_tot > 0.1  & rgb_tot < 1) %>% 
+  ggplot( aes(x = date_p, y = focal_index, color = c_group, group = id)) + #geom_point(alpha = 0.1) + 
+  theme_bw() +
+  geom_line(aes(y=zoo::rollmean(focal_index, 14, na.pad=TRUE)), alpha = 1) +
+  scale_color_manual(values = c( "orange")) + 
+  facet_wrap(~id) +
+  scale_x_date(limits = c(ymd("2020/9/01"), ymd("2021/5/01")))+
+  geom_point(alpha = 0.85)  + facet_wrap(~id) + ylab("spectral index") + xlab("date") 
+
+
+example_tree <- ps %>%
+  filter(site == "Burnet" & id == 42)
+
+
+
+#trying to color the points by actual rgb values
+hist(ps$red)
+ps %>% 
+  mutate(
+         rgb_tot = red + green + blue,
+         rg_dif = (red - green)/(red + green),
+         rg_dif2 = (red + green)/(red + green + blue),
+         focal_index = rgb_tot) %>% 
+  #filter(id < 10) %>% 
+  #filter(site == "Burnet") %>% 
+ # filter(year > 2023) %>% 
+  # filter(c_group == "orange") %>% 
+  ggplot( aes(x = date_p, y = focal_index, color = rgb(red*2, green*2, blue*2), group = id)) + #geom_point(alpha = 0.1) + 
+  theme_bw() +
+  geom_line(aes(y=zoo::rollmean(focal_index, 28, na.pad=TRUE)), alpha = 0.6) +
+  scale_color_identity() + facet_wrap(~site) +
+  geom_point(alpha = 0.1)
+
+
+
+
+rgb2hsv()
+test <- rgb2hsv(ps$red, ps$green, ps$blue, maxColorValue = 1)[1,]
+str(test)
+test <- rgb2hsv(c(0.5 ,1 ,1 ,1), c(0.5 ,1, 1, 1), c(0.5 ,1, 1, 1), maxColorValue = 1)
+
+
+?rgb2hsv
+#summary 
+ps %>% 
+  mutate( c_month = month(date_p),
+          pol_season = case_when(doy < 30 ~ "pollen season",
+                                 doy > 29.5 & doy <330.5 ~ "not pollen season",
+                                 doy > 330 ~"pollen season"),
+          rgb_tot = red + green + blue,
+          rg_dif = (red - green)/(red + green),
+          rg = red - green,
+         rg_dif2 = (2*red + green)/(red + green + blue),
+         focal_index = rg_dif2) %>% 
+
+  #filter(id < 10) %>% 
+  filter(site == "Burnet") %>% 
+  #filter(year > 2023) %>% 
+  group_by(c_group, site, c_month) %>% 
+  summarise(mean_focal_index = mean(focal_index)) %>% 
+  ggplot( aes(x = c_month, y = mean_focal_index, color = c_group)) + #geom_point(alpha = 0.1) + 
+  theme_bw() +
+  geom_point() + 
+  #geom_line(aes(y=zoo::rollmean(mean_focal_index, 28, na.pad=TRUE)), alpha = 0.6) +
+  scale_color_manual(values = c( "green", "orange")) + facet_wrap(~site)
+
+
+
+
+#time series 
+ps %>% 
+  mutate(rg_dif = (red - green)/(red + green),
+         rg_dif2 = (red + green)/(red + green + blue),
+         focal_index = (2*red + green)/(red + green + blue))  %>% 
+  #filter(id < 10) %>% 
+  filter(site == "Burnet") %>% 
+  group_by(c_group,date_p) %>% 
+  summarize(focal_index_mean = mean(focal_index)) %>% 
+  filter(date_p > ymd("2021/11/01")) %>% 
+  # filter(c_group == "orange") %>% 
+  ggplot( aes(x = date_p, y = focal_index_mean, color = c_group)) + #geom_point(alpha = 0.1) + 
+  theme_bw() +
+  geom_line(aes(y=zoo::rollmean(focal_index_mean, 28, na.pad=TRUE)), alpha = 0.6) +
+  scale_color_manual(values = c( "green", "orange")) 
 
 # original script used to export  tree coordinates and date for Yiluan
 # p1920 <- readr::read_csv("C:/Users/dsk273/Box/texas/pheno/manual_obs/pheno_clean_fs19_20_210910.csv")
