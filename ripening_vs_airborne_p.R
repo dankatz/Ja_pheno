@@ -8,6 +8,7 @@ library(imputeTS)
 #library(ggpmisc)
 library(lubridate)
 library(sf)
+library(ggplot2)
 
 ### compare NAB data during 2019-2020 and 2020-2021 with pollen model #######################################
 nab <- readr::read_csv("C:/Users/danka/Box/texas/NAB/NAB2009_2021_tx_epi_pollen_220831.csv") %>%
@@ -156,23 +157,34 @@ nab_pheno_c %>%
   geom_line(data = nab_pheno_c, aes(x = day_exp, y = Cupressaceae/50000), alpha = 0.5, col = "red") 
 
 #focus in on just a station in a year
-NAB_station_focal <- "Austin"
+NAB_station_focal <- "San Antonio A"
 focal_year <- "yr_2020_2021"
 ts_panel_pheno_pred <- nab_pheno_c %>%
   filter(NAB_station == NAB_station_focal) %>% 
   filter(yr_exp == focal_year) %>% 
   ggplot(aes(x = date, y = rel_opening * 100)) + geom_line() + 
   xlab("date")+ ylab("cone opening (% within 25 km)") + ggthemes::theme_few() +
-  theme(text = element_text(size = 20))
+  theme(text = element_text(size = 18)) +
+  scale_x_date(limits = c(mdy("12-17-2020"), mdy("2-1-2021"))) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank())
 
 ts_panel_NAB <- nab_pheno_c %>%
-  filter(NAB_station == NAB_station_focal) %>% 
+  filter(NAB_station == "San Antonio A" | NAB_station == "San Antonio B") %>% 
   filter(yr_exp == focal_year) %>% 
-  ggplot(aes(x = date, y = Cupressaceae)) + geom_line() + geom_point()+
+  ggplot(aes(x = date, y = Cupressaceae, color = NAB_station)) + geom_line() + geom_point()+
   xlab("date")+ ylab(airborne~pollen~(grains~"/"~m^3)) + ggthemes::theme_few() +
-  theme(text = element_text(size = 20))
+  theme(text = element_text(size = 18)) +
+  scale_x_date(limits = c(mdy("12-17-2020"), mdy("2-1-2021"))) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank())
 
-cowplot::plot_grid(ts_panel_pheno_pred, ts_panel_NAB, ncol = 1)
+
+cowplot::plot_grid(ts_panel_pheno_pred, ts_panel_NAB, ncol = 1, align = "hv")
+cowplot::plot_grid(ts_panel_pheno_pred, ts_panel_NAB, panel_c_SanA, ncol = 1, align = "hv") #including predicted amount of release based on hourly model
+#need to run the pollen_release_obs.R script to get this one to work
+ggsave()  
+
 ggsave()  
 
 

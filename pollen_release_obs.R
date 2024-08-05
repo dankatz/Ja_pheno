@@ -105,7 +105,7 @@ ggplot(p, aes(x = y_hat_release_mean, y = pollen_rel)) + geom_boxplot()
 
 ### adding in environmental data: daily ###########################################
 
-daily_files <- list.files(path='C:/Users/dsk273/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
+daily_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='GRIDMET', 
                            full.names = TRUE)
 daily_files <- daily_files[!grepl("drought", daily_files)] #remove the drought files which have a different format
 #if(grepl("drought", daily_files[1]) == TRUE){hourly_files_names <- substr(daily_file_name, 82, 87)} #for drought files
@@ -211,11 +211,11 @@ summary(GRIDMET)
 #   ggplot(aes(x = ))
 
 ### adding in environmental data: hourly ###########################################
-hourly_files <- list.files(path='C:/Users/dsk273/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
+hourly_files <- list.files(path='C:/Users/danka/Box/texas/pheno/met_data/GEE_pheno_site_downloads/', pattern='RTMA', 
                            full.names = TRUE)
 
 hourly_read_fun <- function(hourly_files){
-  hourly_files_names <- substr(hourly_files, 72, 75) 
+  hourly_files_names <- substr(hourly_files, 71, 74) #need to switch here if going back and forth between lab computer and personal laptop
   #hourly_files_names_focal2 <- hourly_files_names_focal
   env_var_hourly <- read_csv(hourly_files,
                              na = "No data") %>%  #names(vpd_raw) #str(vpd_raw)
@@ -606,11 +606,23 @@ data_for_model_results <- data_for_model %>%
 hist(model1$fitted.values, n = 100)
 hist(data_for_model_results$pollen_lots_pred, n = 100)
 
-data_for_model_results %>% 
-  filter(site_name.x == "wade" ) %>% 
+data_for_model_results %>% #unique(data_for_model_results$site_name.x)
+  filter(site_name.x == "san.antonio.hospital" ) %>% 
 ggplot(aes(x = sample_date, y = pollen_lots_pred, group = tree_xy)) + geom_line(alpha = 0.2) + theme_bw() +
   scale_x_date(limits = c(mdy("12-1-2020"), mdy("2-1-2021")))
-                                     
+         
+#for all the field sites near San Antonio 
+#an example for ESA pres 2024
+panel_c_SanA <- data_for_model_results %>% 
+  mutate(lat = as.numeric(stringr::str_split_i(tree_xy, " ", 2)),
+         long = as.numeric(stringr::str_split_i(tree_xy, " ", 1))) %>% 
+  #unique(data_for_model_results$site_name.x)
+  #filter(site_name.x == "san.antonio.hospital" ) %>% 
+  filter(lat < 29.8 & long > -99.2) %>% 
+  ggplot(aes(x = sample_date, y = pollen_lots_pred, group = tree_xy)) + geom_line(alpha = 0.2) + theme_bw() +
+  scale_x_date(limits = c(mdy("12-17-2020"), mdy("2-1-2021"))) +
+  theme(text = element_text(size = 18)) + xlab("date")
+
 
 pROC::auc(data_for_model_results$pollen_lots, data_for_model_results$pollen_lots_pred)
 pROC::plot.roc(data_for_model_results$pollen_lots, data_for_model_results$pollen_lots_pred)
